@@ -1,37 +1,51 @@
 {
-  "0": {
-    "name": "origin",
-    "position": [50.9405, 4.21039],
-    "payload": 0
+  "Waypoints": {
+    "0": {
+      "name": "origin",
+      "type": "base",
+      "position": [50.9405, 4.21039],
+      "payload": 0
+    },
+    "1": {
+      "name": "Epsylon ASBL",
+      "type": "waypoint",
+      "position": [50.94108333333, 4.2105555555556],
+      "payload": 0.128
+    },
+    "2": {
+      "name": "St Elisabeth",
+      "type": "waypoint",
+      "position": [50.940861111, 4.2104722222222],
+      "payload": 0.3
+    },
+    "3": {
+      "name": "Edith Cavell",
+      "type": "waypoint",
+      "position": [50.9407777777, 4.2106944444445],
+      "payload": 0.236
+    },
+    "4": {
+      "name": "Etterbeek-XL",
+      "type": "waypoint",
+      "position": [50.940666666667, 4.2104166666667],
+      "payload": 0.172
+    },
+    "5": {
+      "name": "iris",
+      "type": "waypoint",
+      "position": [50.9405555555, 4.2105555555556],
+      "payload": 0.236
+    },
+    "6": {
+      "name": "Saint-Jean",
+      "type": "waypoint",
+      "position": [50.940388888889, 4.2105],
+      "payload": 0.128
+    }
   },
-  "1": {
-    "name": "Epsylon ASBL",
-    "position": [50.94108333333, 4.2105555555556],
-    "payload": 0.128
-  },
-  "2": {
-    "name": "St Elisabeth",
-    "position": [50.940861111, 4.2104722222222],
-    "payload": 0.3
-  },
-  "3": {
-    "name": "Edith Cavell",
-    "position": [50.9407777777, 4.2106944444445],
-    "payload": 0.236
-  },
-  "4": {
-    "name": "Etterbeek-XL",
-    "position": [50.940666666667, 4.2104166666667],
-    "payload": 0.172
-  },
-  "5": {
-    "name": "iris",
-    "position": [50.9405555555, 4.2105555555556],
-    "payload": 0.236
-  },
-  "6": {
-    "name": "Saint-Jean",
-    "position": [50.940388888889, 4.2105],
-    "payload": 0.128
+  "NoFlyZones": {
+    "0": {
+      "bounds": [[]]
+    }
   }
 }

@@ -8,15 +8,30 @@ def loadWaypoints(path):
     with open(path,'r') as file:
         dump = json.load(file)
 
+        waypoints = dump["Waypoints"]
         pointlist = []
-        for idx in dump:
-            coord1 = dump[idx]["position"][0]
-            coord2 = dump[idx]["position"][1]
-            name = dump[idx]["name"]
-            payload = dump[idx]["payload"]
+        for idx in waypoints:
+            coord1 = waypoints[idx]["position"][0]
+            coord2 = waypoints[idx]["position"][1]
+            name = waypoints[idx]["name"]
+            payload = waypoints[idx]["payload"]
+            point_type = waypoints[idx]["type"]
+            
+            point = WayPoint(coord1, coord2, payload, name=name, idx=int(idx))
+            if point_type == "base":
+                base = point
 
-            pointlist.append(WayPoint(coord1, coord2, payload, name=name, idx=int(idx)))
-    return pointlist
+            pointlist.append(point)
+
+        noFlyZones = dump["NoFlyZones"]
+        zones = []
+        for idx in noFlyZones:
+            bounds = noFlyZones[idx]["bounds"]
+            zones.append(NoFlyZone(bounds,idx))
+        
+        
+
+    return pointlist, zones, base
 
 
 def orientation(a, b, c):
@@ -251,10 +266,11 @@ class WayPoint(Point):
         return f"Waypoint \"{self.name}\" @ x = {self.x:.3f}, y = {self.y:.3f}"
 
 class NoFlyZone:
-    def __init__(self, bounds: list):
+    def __init__(self, bounds: list, idx = -1):
         """if not is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
             bounds = list(reversed(bounds))"""
         self.bounds = bounds        #list with the coordinates of the corners in order
+        self.idx = idx
     
     def intersects_segment(self, p1:Point, p2:Point):
         n = len(self.bounds)
@@ -339,6 +355,8 @@ class Link:
 
 
 if __name__ == "__main__":
+    from graphicsviewer import *
+
     noFlyZones = [
         NoFlyZone([
             Point(10,20,"xy"),
@@ -361,3 +379,14 @@ if __name__ == "__main__":
 
     for p in a.path:
         print(p)
+
+    app = QApplication(sys.argv)
+
+    view = MapView()
+
+    draw_link(view.scene,a)
+    draw_zone(view.scene,noFlyZones[1])
+
+    view.show()
+
+    sys.exit(app.exec())

@@ -3,47 +3,74 @@ import itertools
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from pointlib import loadWaypoints, WayPoint, Link, NoFlyZone
 from rich import print
+from EnergyCalc import *
 
 # =========================
 # USER PARAMETERS
-# =========================
+# ========================='
 
 EMPTY_MASS = 1.5691  # kg
-CRUISE_SPEED = 5.736  # m/s
-BATTERY_ENERGY = 74 * 3600  # Joules (for a 74 wh battery)
+BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
+MAX_PAYLOAD = 0.6
 
 # --- Flight profile ---
 CRUISE_ALTITUDE = 30.0
-CLIMB_RATE = 9.2242            #????
-DESCENT_RATE = 2.0          #????
 SAFETY_RESERVE = 0.15
 
-# --- Power model ---
-A = 120.0
-B = 50.0
+# --- needed for acceleration calculations etc in mathematics.py---
+CD = 1
+RHO = 1.225
+KANTELHOEK = 20
+A = 0.05
+
+MAXLIFT = 7.87696893
 
 # --- Loading Waypoints and selecting BASE ---
-waypoints = loadWaypoints("waypoints.json")
-BASE = waypoints[0]
+waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")
 
 # =========================
-# ENERGY MODEL (chatgpt for now, to be changed evntually)
+# ENERGY MODEL
 # =========================
 
-def power_required(mass):
-    return A * (mass ** 1.5) + B
+def power_required(lift):
+    return 1.231073846*(lift**2) + 7.431724825*lift - 2.405185698       #quadratic regression of power in function of the lift (from experimental results)
+    #return A * (mass ** 1.5) + B
 
 def climb_energy(mass):
-    t = CRUISE_ALTITUDE / CLIMB_RATE
-    return power_required(mass) * t
+    power_to_counter_grav = power_required(lift_vert(mass))
+    
+    a_v, v_v = a_vert(mass), v_vert(mass)
+    d_v = a_v
+
+    T_up = travel_time(CRUISE_ALTITUDE, v_v, a_v, d_v)
+
+    lift = (a_v+d_v)*mass
+    #t = CRUISE_ALTITUDE / CLIMB_RATE
+    return power_required(lift) * T_up
 
 def descent_energy(mass):
-    t = CRUISE_ALTITUDE / DESCENT_RATE
-    return 0.5 * power_required(mass) * t  # in general, the descend demands 30–70% of hover power, so 50% is average. we could measure that (though i dont think its really that impactful)
+    power_to_counter_grav = power_required(lift_vert(mass))
+
+    a_v, v_v = a_vert(mass), v_vert(mass)
+    d_v = a_v
+    T_down = travel_time(CRUISE_ALTITUDE, v_v, a_v, d_v)
+
+    lift = (a_v+d_v)*mass
+    #t = CRUISE_ALTITUDE / DESCENT_RATE
+    return power_required(lift) * T_down
 
 def energy_for_leg(distance, mass):
-    time = distance / CRUISE_SPEED
-    return power_required(mass) * time
+    v_h = v_hor(mass)
+    a_h = a_hor(mass)
+    d_h = a_h
+
+    power_to_counter_grav = power_required(lift_vert(mass))
+    lift = 2*a_h*mass
+    power_to_move = power_required(lift)
+    total_power = power_to_counter_grav + power_to_move
+    #time = distance / CRUISE_SPEED
+    T_horizontal = travel_time(distance, v_h, a_h, d_h)
+    return total_power* T_horizontal
 
 # =========================
 # LINK MATRIX
@@ -74,9 +101,9 @@ links, distance_matrix = get_links_and_dist(waypoints)
 # ROUTE ENERGY
 # =========================
 
-def route_energy(route, waypoints):
+def route_energy(route):
     #print(f"[route_energy] Route: {route} waypoints: {waypoints}")
-    payload_subset = [point.payload for point in waypoints]     #the total payload list needed for this route
+    payload_subset = [point.payload for point in route]     #the total payload list needed for this route
     remaining_payload = sum(payload_subset)
     total_mass = EMPTY_MASS + remaining_payload
 
@@ -106,6 +133,44 @@ def route_energy(route, waypoints):
             energy += climb_energy(total_mass)
 
     return energy
+
+# =========================
+# best path
+# =========================
+
+def placeholder(waypoints, startpoint):         #iterative deepening
+    remaining = [i for i in waypoints if i != startpoint]
+    route = [startpoint]
+    while remaining != []:
+        
+        energy = float("inf")
+
+        for point in remaining:     #depth = 1
+            new_route = route + [point]
+            
+            if len(remaining)<=1:
+                new_energy = route_energy(new_route)
+                if  new_energy < energy:
+                    energy = new_energy
+                    best_new_route = new_route
+            else:
+                remaining2 = [i for i in waypoints if i not in new_route]
+                for point2 in remaining2:       #depth = 2
+                    new_route2  = new_route + [point2]
+                    new_energy = route_energy(new_route2)
+                    if  new_energy < energy:
+                        energy = new_energy
+                        best_new_route = new_route      #only keeps the next row of the best option, we'll reiterate later with that new point and the two next rows  
+        
+        route = best_new_route
+        remaining = [i for i in waypoints if i not in route]
+
+        """print(f"found new best route: {route}")
+        print(f"remaining: {remaining}")
+        input()"""
+
+    route.append(BASE)
+    return route
 
 # =========================
 # OR-TOOLS ROUTE
@@ -153,13 +218,13 @@ def solve_route(sub_points:tuple, startpoint):
 
 def mission_energy(waypoints:tuple):
     if waypoints == []:     #no point of going to nothing (and generates errors)
-        return None, None
+        return None, []
     
-    route = solve_route(waypoints,BASE)
+    route = placeholder(waypoints,BASE)
     if route is None:
         return None, None
 
-    energy = route_energy(route, waypoints)
+    energy = route_energy(route)
     return energy, route
 
 # =========================
@@ -174,28 +239,35 @@ best_split_energy = float("inf")
 best_split = None
 
 print("-------\nstarting split search...\n-------")
-
+#split seach only splits the payload in two groups for now
 iteration = 0
 for r in range(1, len(all_waypoints)-1):                      #just a brute force to find lowest energy consumption. should be fine bc we only have 7 hospitals
-    noBase = [point for point in all_waypoints if point != BASE] #we're removing the base to make combinations as it needs to be added in both routes later on
+    noBase = [point for point in all_waypoints if point != BASE] #we're removing the base to make combinations as it needs to be added in both routes later on, but as combinations are random, base could be added two both and we don't want it twice in any of the two combinations
     for combo in itertools.combinations(noBase, r):
         iteration += 1
-        other = tuple(x for x in all_waypoints if x not in combo)    #base already included in allwaypoints     also, the tuple is needed, otherwise you get an empty ther by the time you want to generate combo_new (dont ask me why, has smth to do with generators)   
+        other = tuple(x for x in all_waypoints if x not in combo)    #base already included in allwaypoints     also, the tuple is needed otherwise you get an empty ther by the time you want to generate combo_new (dont ask me why, has smth to do with generators)   
         combo_new = tuple(x for x in all_waypoints if (x not in other or x == BASE))  #also adding base to combo (creating a new vraiable cuz you otherwise get a generator already executing error)
         #^[Note]: the position of base doesn't mater, solve_route knows to start at base and not just take the first element as startpoint^
         
         #print(f"[split search]\ncombo {tuple(combo)}\ncombo_new {tuple(combo_new)}\nother {tuple(other)}")
+        combo_payload = sum(point.payload for point in combo_new)
+        other_payload = sum(point.payload for point in other)
+        if combo_payload > MAX_PAYLOAD or other_payload > MAX_PAYLOAD:
+            #print(f"[green]info[/green] skipping following combinations: combo {combo_new} other {other} \n[red]reason[/red]:",end="")
+            print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {MAX_PAYLOAD}")
+            continue            #skips the calculations completely if the maximum payload is reached (you can't fly anyways)
 
         e1, r1 = mission_energy(combo_new)
         e2, r2 = mission_energy(other)
 
-        print(f"iteration [{iteration}]\ne1: {e1}, r1: {r1}\ne2: {e2}, r2: {r2}")
+        #print(f"iteration [{iteration}]\ne1: {e1}, r1: {r1}\ne2: {e2}, r2: {r2}")
 
         if e1 is None or e2 is None:            ####
             continue
 
         total = e1 + e2
 
+        print(f"iteration [{iteration}]  energy: {total/3600:.1f}")
         if total < best_split_energy:
             best_split_energy = total
             best_split = (combo_new, other, r1, r2)
