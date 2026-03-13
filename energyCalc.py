@@ -1,100 +1,117 @@
 import math
 
-CD = 1
+# CONSTANTEN
+g = 9.81
+CD = 1.0
 RHO = 1.225
-KANTELHOEK = 20
 A = 0.05
 
-MAXLIFT = 7.87696893
+KANTELHOEK = 20  # graden
+
+MAXLIFT = 7.87696893  # per motor
+MOTORS = 4
+
+
+# --- BASISKRACHTEN ---
 
 def lift_vert(mass):
-    return mass*9.81
+    return mass * g
+
+
+def total_thrust():
+    return MAXLIFT * MOTORS
+
+
+# --- VERSNELLINGEN ---
 
 def a_hor(mass):
-    return (MAXLIFT*math.sin(math.radians(KANTELHOEK)))/(mass)
+    thrust_h = total_thrust() * math.sin(math.radians(KANTELHOEK))
+    return thrust_h / mass
+
 
 def a_vert(mass):
-    return ((MAXLIFT*4)-(lift_vert(mass)))/mass
+    thrust = total_thrust()
+    return (thrust - lift_vert(mass)) / mass
+
+
+# --- MAXIMALE SNELHEDEN ---
 
 def v_hor(mass):
-    return math.sqrt((2*(mass)*math.tan(math.radians(KANTELHOEK)))/(CD*RHO*A))
+    thrust_h = total_thrust() * math.sin(math.radians(KANTELHOEK))
+    return math.sqrt((2 * thrust_h) / (CD * RHO * A))
+
 
 def v_vert(mass):
-    return math.sqrt(((2*(((MAXLIFT*4))-(lift_vert(mass))))/(CD*RHO*A)))
+    thrust = total_thrust()
+    F = thrust - lift_vert(mass)
 
-def travel_time(distance, v_max, a):
-    """
-    Bereken tijd voor een beweging met:
-    afstand, topsnelheid, versnelling (ook voor vertraging)
-    """
+    if F <= 0:
+        return 0
 
-    # afstand nodig voor versnellen en vertragen
-    s_acc = v_max**2 / (2*a)
-    s_dec = v_max**2 / (2*a)
+    return math.sqrt((2 * F) / (CD * RHO * A))
 
-    # geval 1: topsnelheid wordt bereikt
-    if distance >= s_acc + s_dec:
 
-        t_acc = v_max / a
-        t_dec = v_max / a
+# --- TIJD BEREKENING ---
 
-        s_const = distance - s_acc - s_dec
-        t_const = s_const / v_max
+def travel_time(distance, vmax, acceleration):
 
-        return t_acc + t_const + t_dec
+    s_min = vmax**2 / acceleration
 
-    # geval 2: topsnelheid wordt niet bereikt
+    if distance > s_min:
+
+        t_acc = vmax / acceleration
+        t_dec = vmax / acceleration
+
+        s_cruise = distance - s_min
+        t_cruise = s_cruise / vmax
+
+        total_time = t_acc + t_cruise + t_dec
+
     else:
 
-        v_peak = math.sqrt(2*distance / (1/a + 1/a))
+        v_peak = math.sqrt(acceleration * distance)
+        t_acc = v_peak / acceleration
 
-        t_acc = v_peak / a
-        t_dec = v_peak / a
+        total_time = 2 * t_acc
 
-        return t_acc + t_dec
+    return total_time
 
 
-def drone_mission_time(
-        D_h, v_h, a_h,
-        D_v, v_v, a_v):
+# --- MISSIE TIJD ---
 
-    # horizontale vlucht
+def drone_mission_time(D_h, v_h, a_h, D_v, v_v, a_v):
+
     T_horizontal = travel_time(D_h, v_h, a_h)
-
-    # dalen
+    T_up = travel_time(D_v, v_v, a_v)
     T_down = travel_time(D_v, v_v, a_v)
 
-    # stijgen (zelfde parameters)
-    T_up = travel_time(D_v, v_v, a_v)
+    T_total = T_horizontal + T_up + T_down
 
-    # totale tijd
-    T_total = T_horizontal + T_down + T_up
+    return T_horizontal, T_up, T_down, T_total
 
-    return T_horizontal, T_down, T_up, T_total
+
+# --- TEST ---
 
 if __name__ == "__main__":
-    mass = 1.5691  # empty mass (kg)
-    print(f"Horizontal top speed:     {v_hor(mass):.3f} m/s")
+
+    mass = 1.5691
+
+    print(f"Horizontal top speed:     {v_hor(mass):.3f} m/s ({v_hor(mass)*3.6:.3f} km/h)")
     print(f"Horizontal acceleration:  {a_hor(mass):.3f} m/s²")
-    print(f"Vertical top speed:       {v_vert(mass):.3f} m/s")
+    print(f"Vertical top speed:       {v_vert(mass):.3f} m/s ({v_vert(mass)*3.6:.3f} km/h)")
     print(f"Vertical acceleration:    {a_vert(mass):.3f} m/s²")
+
     print()
 
-    # voorbeeld parameters
-    D_h = 500      # horizontale afstand (m)
-    v_h = 20       # horizontale topsnelheid (m/s)
-    a_h = 4        # horizontale versnelling (m/s²)
+    D_h = 20
+    D_v = 5
 
-    D_v = 100      # verticale afstand (m)
-    v_v = 5        # verticale topsnelheid (m/s)
-    a_v = 2        # verticale versnelling (m/s²)
-
-    Th, Td, Tu, Ttot = drone_mission_time(
-        D_h, v_h, a_h,
-        D_v, v_v, a_v
+    Th, Tu, Td, Ttot = drone_mission_time(
+        D_h, v_hor(mass), a_hor(mass),
+        D_v, v_vert(mass), a_vert(mass)
     )
 
     print("Horizontale tijd:", Th, "s")
-    print("Tijd dalen:", Td, "s")
     print("Tijd stijgen:", Tu, "s")
+    print("Tijd dalen:", Td, "s")
     print("Totale tijd:", Ttot, "s")
