@@ -75,7 +75,7 @@ def energy_for_leg(distance, mass):
 # =========================
 # LINK MATRIX
 # =========================
-def get_links_and_dist(points):
+def get_links_and_dist(points, noflyzones = []):
     n = len(points)
     links = np.full((n, n), None, dtype=object) #create empty matrix with only "None"'s
 
@@ -84,7 +84,7 @@ def get_links_and_dist(points):
     for i in range(n):
         #only iterating for the upper triangle of the matrix (and doing the lower at the same time)
         for j in range(i+1,n):      #i+1 for skipping the diagonal
-            value = Link(points[i],points[j])
+            value = Link(points[i],points[j], noflyzones=noflyzones)
             dist = value.length()
 
             links[i][j] = value
@@ -94,8 +94,7 @@ def get_links_and_dist(points):
             distances[j,i] = dist
 
     return links, distances
-            
-links, distance_matrix = get_links_and_dist(waypoints)
+links, distance_matrix = get_links_and_dist(waypoints, noflyzones)
 #print(f"Distance matrix: {distance_matrix}")
 # =========================
 # ROUTE ENERGY
@@ -176,7 +175,7 @@ def breadth_first(waypoints:list, startpoint):
     remaining = [point for point in waypoints if not point == startpoint]
     energy = float('inf')
     route = None
-    print(f"getting all permutations of {remaining}")
+    #print(f"getting all permutations of {remaining}")
     for combination in itertools.permutations(remaining):
         new_route = [startpoint]+list(combination)+[startpoint]
         new_energy = route_energy(new_route)
@@ -244,68 +243,68 @@ def mission_energy(waypoints:tuple):
 # =========================
 # SPLIT SEARCH
 # =========================
+if __name__ == "__main__":
+    all_waypoints = waypoints
 
-all_waypoints = waypoints
+    best_single = mission_energy(all_waypoints)
 
-best_single = mission_energy(all_waypoints)
+    best_split_energy = float("inf")
+    best_split = None
 
-best_split_energy = float("inf")
-best_split = None
+    print("-------\nstarting split search...\n-------")
+    #split seach only splits the payload in two groups for now
+    iteration = 0
+    for r in range(1, len(all_waypoints)-1):                      #just a brute force to find lowest energy consumption. should be fine bc we only have 7 hospitals
+        noBase = [point for point in all_waypoints if point != BASE] #we're removing the base to make combinations as it needs to be added in both routes later on, but as combinations are random, base could be added two both and we don't want it twice in any of the two combinations
+        for combo in itertools.combinations(noBase, r):
+            iteration += 1
+            other = tuple(x for x in all_waypoints if x not in combo)    #base already included in allwaypoints     also, the tuple is needed otherwise you get an empty ther by the time you want to generate combo_new (dont ask me why, has smth to do with generators)   
+            combo_new = tuple(x for x in all_waypoints if (x not in other or x == BASE))  #also adding base to combo (creating a new vraiable cuz you otherwise get a generator already executing error)
+            #^[Note]: the position of base doesn't mater, solve_route knows to start at base and not just take the first element as startpoint^
+            
+            #print(f"[split search]\ncombo {tuple(combo)}\ncombo_new {tuple(combo_new)}\nother {tuple(other)}")
+            combo_payload = sum(point.payload for point in combo_new)
+            other_payload = sum(point.payload for point in other)
+            if combo_payload > MAX_PAYLOAD or other_payload > MAX_PAYLOAD:
+                #print(f"[green]info[/green] skipping following combinations: combo {combo_new} other {other} \n[red]reason[/red]:",end="")
+                #print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {MAX_PAYLOAD}")
+                continue            #skips the calculations completely if the maximum payload is reached (you can't fly anyways)
 
-print("-------\nstarting split search...\n-------")
-#split seach only splits the payload in two groups for now
-iteration = 0
-for r in range(1, len(all_waypoints)-1):                      #just a brute force to find lowest energy consumption. should be fine bc we only have 7 hospitals
-    noBase = [point for point in all_waypoints if point != BASE] #we're removing the base to make combinations as it needs to be added in both routes later on, but as combinations are random, base could be added two both and we don't want it twice in any of the two combinations
-    for combo in itertools.combinations(noBase, r):
-        iteration += 1
-        other = tuple(x for x in all_waypoints if x not in combo)    #base already included in allwaypoints     also, the tuple is needed otherwise you get an empty ther by the time you want to generate combo_new (dont ask me why, has smth to do with generators)   
-        combo_new = tuple(x for x in all_waypoints if (x not in other or x == BASE))  #also adding base to combo (creating a new vraiable cuz you otherwise get a generator already executing error)
-        #^[Note]: the position of base doesn't mater, solve_route knows to start at base and not just take the first element as startpoint^
-        
-        #print(f"[split search]\ncombo {tuple(combo)}\ncombo_new {tuple(combo_new)}\nother {tuple(other)}")
-        combo_payload = sum(point.payload for point in combo_new)
-        other_payload = sum(point.payload for point in other)
-        if combo_payload > MAX_PAYLOAD or other_payload > MAX_PAYLOAD:
-            #print(f"[green]info[/green] skipping following combinations: combo {combo_new} other {other} \n[red]reason[/red]:",end="")
-            print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {MAX_PAYLOAD}")
-            continue            #skips the calculations completely if the maximum payload is reached (you can't fly anyways)
+            e1, r1 = mission_energy(combo_new)
+            e2, r2 = mission_energy(other)
 
-        e1, r1 = mission_energy(combo_new)
-        e2, r2 = mission_energy(other)
+            #print(f"iteration [{iteration}]\ne1: {e1}, r1: {r1}\ne2: {e2}, r2: {r2}")
 
-        #print(f"iteration [{iteration}]\ne1: {e1}, r1: {r1}\ne2: {e2}, r2: {r2}")
+            if e1 is None or e2 is None:            ####
+                continue
 
-        if e1 is None or e2 is None:            ####
-            continue
+            total = e1 + e2
 
-        total = e1 + e2
+            print(f"iteration [{iteration}]  energy: {total/3600:.1f}")
+            if total < best_split_energy:
+                best_split_energy = total
+                best_split = (combo_new, other, r1, r2)
+                #print(f"[red bold]new best split found!![/red bold]\n[yellow]best_split:[/yellow] {best_split}")
 
-        print(f"iteration [{iteration}]  energy: {total/3600:.1f}")
-        if total < best_split_energy:
-            best_split_energy = total
-            best_split = (combo_new, other, r1, r2)
-            print(f"[red bold]new best split found!![/red bold]\n[yellow]best_split:[/yellow] {best_split}")
+                best_split_iteration = iteration
 
-            best_split_iteration = iteration
+    # =========================
+    # REPORT
+    # =========================
 
-# =========================
-# REPORT
-# =========================
+    print("===== SINGLE MISSION =====")
+    if best_single[0] is not None:
+        single_energy = best_single[0]
+        print(f"Energy: {single_energy/3600:.1f} Wh")
 
-print("===== SINGLE MISSION =====")
-if best_single[0] is not None:
-    single_energy = best_single[0]
-    print(f"Energy: {single_energy/3600:.1f} Wh")
+        if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
+            print("❌ Not feasible")
+        else:
+            print("✅ Feasible")
 
-    if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
-        print("❌ Not feasible")
-    else:
-        print("✅ Feasible")
-
-print("\n===== BEST 2-MISSION SPLIT =====")
-if best_split:
-    print("best split iteration: ", best_split_iteration)
-    print("Group 1:", list(best_split[2]))
-    print("Group 2:", list(best_split[3]))
-    print(f"Total energy: {best_split_energy/3600:.1f} Wh")
+    print("\n===== BEST 2-MISSION SPLIT =====")
+    if best_split:
+        print("best split iteration: ", best_split_iteration)
+        print("Group 1:", list(best_split[2]))
+        print("Group 2:", list(best_split[3]))
+        print(f"Total energy: {best_split_energy/3600:.1f} Wh")

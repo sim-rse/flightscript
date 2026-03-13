@@ -3,6 +3,7 @@ import heapq
 import matplotlib.pyplot as plt
 import json
 from rich import print
+import sys
 
 def loadWaypoints(path):
     with open(path,'r') as file:
@@ -26,8 +27,12 @@ def loadWaypoints(path):
         noFlyZones = dump["NoFlyZones"]
         zones = []
         for idx in noFlyZones:
-            bounds = noFlyZones[idx]["bounds"]
-            zones.append(NoFlyZone(bounds,idx))
+            bounds_list = noFlyZones[idx]["bounds"]
+            bounds = []
+            for point in bounds_list:
+                bounds.append(Point(point[0],point[1]))
+            name = noFlyZones[idx]["name"]
+            zones.append(NoFlyZone(bounds,idx, name))
         
         
 
@@ -266,11 +271,12 @@ class WayPoint(Point):
         return f"Waypoint \"{self.name}\" @ x = {self.x:.3f}, y = {self.y:.3f}"
 
 class NoFlyZone:
-    def __init__(self, bounds: list, idx = -1):
-        """if not is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
-            bounds = list(reversed(bounds))"""
+    def __init__(self, bounds: list, idx = -1, name = "no fly zone"):
+        if not is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
+            bounds = list(reversed(bounds))
         self.bounds = bounds        #list with the coordinates of the corners in order
         self.idx = idx
+        self.name = name
     
     def intersects_segment(self, p1:Point, p2:Point):
         n = len(self.bounds)
@@ -325,7 +331,9 @@ class NoFlyZone:
         lst = []
         for i in self.bounds:
             lst.append(str(i))
-        return f"noFlyZone with bounds: {lst}"
+        return f"noFlyZone: {self.name} with bounds: {lst}"
+    def __repr__(self):
+        return self.__str__()
 
 class Link:
     def __init__(self, start: WayPoint, end: WayPoint, noflyzones:list=None):
@@ -336,8 +344,8 @@ class Link:
         margin = 2
         noflyzones = [zone.inflated(margin) for zone in noflyzones] #makes new, slightly bigger noflyzones so you don't touch the corners of the zone
 
-        for zone in noflyzones:
-                print(zone)
+        #for zone in noflyzones:
+        #        print(zone)
 
         nodes = collect_nodes(start, end, noflyzones)
         graph = build_visibility_graph(nodes, noflyzones)
@@ -355,7 +363,6 @@ class Link:
 
 
 if __name__ == "__main__":
-    from graphicsviewer import *
 
     noFlyZones = [
         NoFlyZone([
@@ -380,13 +387,14 @@ if __name__ == "__main__":
     for p in a.path:
         print(p)
 
+    """from UI_ressources import *
     app = QApplication(sys.argv)
 
     view = MapView()
 
-    draw_link(view.scene,a)
-    draw_zone(view.scene,noFlyZones[1])
+    draw_link(view.scene_,a)
+    draw_zone(view.scene_,noFlyZones[1])
 
     view.show()
 
-    sys.exit(app.exec())
+    sys.exit(app.exec())"""

@@ -1,4 +1,3 @@
-import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QGraphicsView, QGraphicsScene
 )
@@ -6,22 +5,42 @@ from PyQt6.QtGui import (
     QPixmap, QPen, QBrush, QColor, QPolygonF
 )
 from PyQt6.QtCore import Qt, QPointF
+import pointlib
 
-from pointlib import *
-import GUI
+def draw_point(scene:QGraphicsScene, point):
+    r = 2
+    scene.addEllipse(
+        point.x - r,
+        point.y - r,
+        2*r,
+        2*r
+    )
+
+def draw_link(scene:QGraphicsScene, link):
+    for i in range(len(link.path) - 1):
+        a = link.path[i]
+        b = link.path[i+1]
+
+        scene.addLine(a.x, a.y, b.x, b.y)
+
+
+def draw_zone(scene:QGraphicsScene, zone):
+    poly = QPolygonF([QPointF(p.x, p.y) for p in zone.bounds])
+    scene.addPolygon(poly)
 
 class MapView(QGraphicsView):
 
     def __init__(self, parent = None):
         super().__init__(parent = parent)
 
-        self.scene = QGraphicsScene()
-        self.setScene(self.scene)
+        self.scene_ = QGraphicsScene()
+        self.setScene(self.scene_)
 
         self.setRenderHint(self.renderHints().Antialiasing)
 
         # enable panning
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        
 
     # zoom
     def wheelEvent(self, event):
@@ -37,114 +56,73 @@ class MapView(QGraphicsView):
 
     def draw_background(self, image_path):
         pixmap = QPixmap(image_path)
-        self.scene.addPixmap(pixmap)
+        self.scene_.addPixmap(pixmap)
 
-    def draw_point(self, point, color=QColor("blue"), size=2):
+    def draw_point(self, point:pointlib.Point, color=QColor("blue"), size=2, text = False, scale = 1):
         r = size / 2
-        self.scene.addEllipse(
-            point.x - r,
-            point.y - r,
+        self.scene_.addEllipse(
+            point.x*scale - r,
+            -(point.y*scale) - r,
             size,
             size,
             QPen(color),
             QBrush(color)
         )
 
-    def draw_zone(self, zone):
-        polygon = QPolygonF([QPointF(p.x, p.y) for p in zone.bounds])
+        if text and hasattr(point,"name"):
+            text_item = self.scene_.addText(point.name)
+            text_item.setPos(point.x*scale, -(point.y)*scale)
+            
 
-        pen = QPen(QColor(200, 0, 0))
-        brush = QBrush(QColor(255, 0, 0, 80))
+    def draw_zone(self, zone:pointlib.NoFlyZone, color = QColor(255,0,0), text = True, scale = 1):
+        polygon = QPolygonF([QPointF(p.x*scale, -(p.y*scale)) for p in zone.bounds])
 
-        self.scene.addPolygon(polygon, pen, brush)
+        color.setAlpha(80)
+        pen = QPen(QColor(int(color.red()*0.7), int(color.green()*0.7), int(color.blue()*0.7)))
+        brush = QBrush(color)
 
-    def draw_graph(self, graph):
+        self.scene_.addPolygon(polygon, pen, brush)
+        
+        if text:
+            #drawing text labels
+            text_scale = 0.5
+
+            text_item = self.scene_.addText(zone.name)
+            text_item.setScale(text_scale)
+            # get center of polygon
+            rect = polygon.boundingRect()
+            center = rect.center()
+
+            # center text around that point
+            text_rect = text_item.boundingRect()
+            text_item.setPos(
+                center.x() - text_rect.width()*text_scale/2,
+                center.y() - text_rect.height()*text_scale/2
+    )
+
+    def draw_graph(self, graph,scale = 1):
         pen = QPen(QColor(150, 150, 150))
         pen.setWidth(1)
 
         for node, edges in graph.items():
-            self.draw_point(node,size=1)
+            self.draw_point(node,size=1, scale=scale)
             for neigh, _ in edges:
-                self.scene.addLine(
-                    node.x, node.y,
-                    neigh.x, neigh.y,
+                self.scene_.addLine(
+                    node.x*scale, -(node.y*scale),
+                    neigh.x*scale, -(neigh.y*scale),
                     pen
                 )
 
-    def draw_path(self, path):
+    def draw_path(self, path, scale = 1):
         pen = QPen(QColor(0, 200, 0))
         pen.setWidth(1)
 
         for i in range(len(path)-1):
             a = path[i]
             b = path[i+1]
-            self.draw_point(b, color=QColor(0, 200, 0), size=1)
-            self.scene.addLine(
-                a.x, a.y,
-                b.x, b.y,
+            self.draw_point(b, color=QColor(0, 200, 0), size=1, scale=scale)
+            self.scene_.addLine(
+                a.x*scale, -(a.y*scale),        #flipping y coordinates cuz see earlier
+                b.x*scale, -(b.y*scale),
                 pen
             )
-
-
-class CustomWindow(GUI.Ui_MainWindow):
-    def setupUi(self, MainWindow):
-        super().setupUi(MainWindow)
-    def build_demo(self):
-
-        # -----------------------------
-        # demo map background
-        # -----------------------------
-
-        # optional map image
-        # self.graphicsView.draw_background("map.png")
-
-        # -----------------------------
-        # no-fly zones
-        # -----------------------------
-
-        nofly = [
-            NoFlyZone([
-                Point(10,20,"xy"),
-                Point(20,20,"xy"),
-                Point(20,10,"xy"),
-                Point(10,10,"xy")
-            ]),
-            NoFlyZone([
-                Point(5,7,"xy"),
-                Point(40,7,"xy"),
-                Point(40,3,"xy"),
-                Point(5,3,"xy")
-            ])
-        ]
-
-        for zone in nofly:
-            self.graphicsView.draw_zone(zone)
-
-        # -----------------------------
-        # start / goal
-        # -----------------------------
-
-        start = WayPoint(16,30,coord_type="xy")
-        goal = WayPoint(15,-6,coord_type="xy")
-
-        # -----------------------------
-        # path planning
-        # -----------------------------
-
-        margin = 2
-        inflated = [z.inflated(margin) for z in nofly]
-
-        nodes = collect_nodes(start, goal, inflated)
-        graph = build_visibility_graph(nodes, inflated)
-
-        link = Link(start, goal, nofly)
-
-        # optional visibility graph
-        #self.graphicsView.draw_graph(graph)
-
-        # shortest path
-        self.graphicsView.draw_path(link.path)
-
-        
-        self.graphicsView.draw_point(start, QColor("blue"), 8)
-        self.graphicsView.draw_point(goal, QColor("orange"), 8)

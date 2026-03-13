@@ -447,7 +447,6 @@
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad_project">
    <property name="enabled">
     <bool>false</bool>
