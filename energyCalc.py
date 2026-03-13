@@ -22,21 +22,21 @@ def v_hor(mass):
 def v_vert(mass):
     return math.sqrt(((2*(((MAXLIFT*4))-(lift_vert(mass))))/(CD*RHO*A)))
 
-def travel_time(distance, v_max, a, d):
+def travel_time(distance, v_max, a):
     """
     Bereken tijd voor een beweging met:
-    afstand, topsnelheid, versnelling en vertraging
+    afstand, topsnelheid, versnelling (ook voor vertraging)
     """
 
     # afstand nodig voor versnellen en vertragen
     s_acc = v_max**2 / (2*a)
-    s_dec = v_max**2 / (2*d)
+    s_dec = v_max**2 / (2*a)
 
     # geval 1: topsnelheid wordt bereikt
     if distance >= s_acc + s_dec:
 
         t_acc = v_max / a
-        t_dec = v_max / d
+        t_dec = v_max / a
 
         s_const = distance - s_acc - s_dec
         t_const = s_const / v_max
@@ -46,26 +46,26 @@ def travel_time(distance, v_max, a, d):
     # geval 2: topsnelheid wordt niet bereikt
     else:
 
-        v_peak = math.sqrt(2*distance / (1/a + 1/d))
+        v_peak = math.sqrt(2*distance / (1/a + 1/a))
 
         t_acc = v_peak / a
-        t_dec = v_peak / d
+        t_dec = v_peak / a
 
         return t_acc + t_dec
 
 
 def drone_mission_time(
-        D_h, v_h, a_h, d_h,
-        D_v, v_v, a_v, d_v):
+        D_h, v_h, a_h,
+        D_v, v_v, a_v):
 
     # horizontale vlucht
-    T_horizontal = travel_time(D_h, v_h, a_h, d_h)
+    T_horizontal = travel_time(D_h, v_h, a_h)
 
     # dalen
-    T_down = travel_time(D_v, v_v, a_v, d_v)
+    T_down = travel_time(D_v, v_v, a_v)
 
     # stijgen (zelfde parameters)
-    T_up = travel_time(D_v, v_v, a_v, d_v)
+    T_up = travel_time(D_v, v_v, a_v)
 
     # totale tijd
     T_total = T_horizontal + T_down + T_up
@@ -73,21 +73,25 @@ def drone_mission_time(
     return T_horizontal, T_down, T_up, T_total
 
 if __name__ == "__main__":
+    mass = 1.5691  # empty mass (kg)
+    print(f"Horizontal top speed:     {v_hor(mass):.3f} m/s")
+    print(f"Horizontal acceleration:  {a_hor(mass):.3f} m/s²")
+    print(f"Vertical top speed:       {v_vert(mass):.3f} m/s")
+    print(f"Vertical acceleration:    {a_vert(mass):.3f} m/s²")
+    print()
+
     # voorbeeld parameters
     D_h = 500      # horizontale afstand (m)
     v_h = 20       # horizontale topsnelheid (m/s)
     a_h = 4        # horizontale versnelling (m/s²)
-    d_h = 4        # horizontale vertraging (m/s²)
 
     D_v = 100      # verticale afstand (m)
     v_v = 5        # verticale topsnelheid (m/s)
     a_v = 2        # verticale versnelling (m/s²)
-    d_v = 2        # verticale vertraging (m/s²)
-
 
     Th, Td, Tu, Ttot = drone_mission_time(
-        D_h, v_h, a_h, d_h,
-        D_v, v_v, a_v, d_v
+        D_h, v_h, a_h,
+        D_v, v_v, a_v
     )
 
     print("Horizontale tijd:", Th, "s")
