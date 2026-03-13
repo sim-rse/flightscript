@@ -42,7 +42,7 @@ def climb_energy(mass):
     a_v, v_v = a_vert(mass), v_vert(mass)
     d_v = a_v
 
-    T_up = travel_time(CRUISE_ALTITUDE, v_v, a_v, d_v)
+    T_up = travel_time(CRUISE_ALTITUDE, v_v, a_v)
 
     lift = (a_v+d_v)*mass
     #t = CRUISE_ALTITUDE / CLIMB_RATE
@@ -53,7 +53,7 @@ def descent_energy(mass):
 
     a_v, v_v = a_vert(mass), v_vert(mass)
     d_v = a_v
-    T_down = travel_time(CRUISE_ALTITUDE, v_v, a_v, d_v)
+    T_down = travel_time(CRUISE_ALTITUDE, v_v, a_v)
 
     lift = (a_v+d_v)*mass
     #t = CRUISE_ALTITUDE / DESCENT_RATE
@@ -69,7 +69,7 @@ def energy_for_leg(distance, mass):
     power_to_move = power_required(lift)
     total_power = power_to_counter_grav + power_to_move
     #time = distance / CRUISE_SPEED
-    T_horizontal = travel_time(distance, v_h, a_h, d_h)
+    T_horizontal = travel_time(distance, v_h, a_h)
     return total_power* T_horizontal
 
 # =========================
@@ -138,7 +138,7 @@ def route_energy(route):
 # best path
 # =========================
 
-def placeholder(waypoints, startpoint):         #iterative deepening
+def iterative_deepening(waypoints, startpoint):         #iterative deepening
     remaining = [i for i in waypoints if i != startpoint]
     route = [startpoint]
     while remaining != []:
@@ -170,6 +170,20 @@ def placeholder(waypoints, startpoint):         #iterative deepening
         input()"""
 
     route.append(BASE)
+    return route
+
+def breadth_first(waypoints:list, startpoint):
+    remaining = [point for point in waypoints if not point == startpoint]
+    energy = float('inf')
+    route = None
+    print(f"getting all permutations of {remaining}")
+    for combination in itertools.permutations(remaining):
+        new_route = [startpoint]+list(combination)+[startpoint]
+        new_energy = route_energy(new_route)
+        if new_energy < energy:
+            route = new_route
+            energy = new_energy
+            #print(f"[[red bold]![/red bold]] found new best route: {route}")
     return route
 
 # =========================
@@ -220,7 +234,7 @@ def mission_energy(waypoints:tuple):
     if waypoints == []:     #no point of going to nothing (and generates errors)
         return None, []
     
-    route = placeholder(waypoints,BASE)
+    route = breadth_first(waypoints,BASE)
     if route is None:
         return None, None
 
