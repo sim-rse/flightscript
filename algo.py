@@ -3,7 +3,7 @@ import itertools
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from pointlib import loadWaypoints, WayPoint, Link, NoFlyZone
 from rich import print
-from EnergyCalc import *
+from energyCalc import *
 
 # =========================
 # USER PARAMETERS
