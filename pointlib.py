@@ -80,16 +80,16 @@ def collect_nodes(start, end, noflyzones):
     return nodes
 
 def visible(p1, p2, noflyzones):
-    #mid = Point((p1.x + p2.x)/2, (p1.y + p2.y)/2, "xy")
+    mid = Point((p1.x + p2.x)/2, (p1.y + p2.y)/2, "xy")
 
     for zone in noflyzones:
         hit, _, _ = zone.intersects_segment(p1, p2)
         if hit:
             return False
 
-        """#block if segment goes through interior
+        #block if segment goes through interior
         if point_in_polygon(mid, zone.bounds):
-            return False"""
+            return False
 
     return True
 
@@ -272,7 +272,7 @@ class WayPoint(Point):
 
 class NoFlyZone:
     def __init__(self, bounds: list, idx = -1, name = "no fly zone"):
-        if not is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
+        if is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
             bounds = list(reversed(bounds))
         self.bounds = bounds        #list with the coordinates of the corners in order
         self.idx = idx
@@ -327,6 +327,7 @@ class NoFlyZone:
             )
 
         return NoFlyZone(new_bounds)
+    
     def __str__(self):
         lst = []
         for i in self.bounds:

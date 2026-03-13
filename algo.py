@@ -240,18 +240,23 @@ def mission_energy(waypoints:tuple):
     energy = route_energy(route)
     return energy, route
 
-# =========================
-# SPLIT SEARCH
-# =========================
-if __name__ == "__main__":
+
+def main():
+    # =========================
+    # SINGLE SEARCH
+    # =========================
     all_waypoints = waypoints
 
-    best_single = mission_energy(all_waypoints)
+    single_energy, single_route = mission_energy(all_waypoints)
+
+    # =========================
+    # SPLIT SEARCH
+    # =========================
+    print("-------\nstarting split search...\n-------")
 
     best_split_energy = float("inf")
     best_split = None
 
-    print("-------\nstarting split search...\n-------")
     #split seach only splits the payload in two groups for now
     iteration = 0
     for r in range(1, len(all_waypoints)-1):                      #just a brute force to find lowest energy consumption. should be fine bc we only have 7 hospitals
@@ -293,8 +298,7 @@ if __name__ == "__main__":
     # =========================
 
     print("===== SINGLE MISSION =====")
-    if best_single[0] is not None:
-        single_energy = best_single[0]
+    if single_route is not None:
         print(f"Energy: {single_energy/3600:.1f} Wh")
 
         if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
@@ -308,3 +312,17 @@ if __name__ == "__main__":
         print("Group 1:", list(best_split[2]))
         print("Group 2:", list(best_split[3]))
         print(f"Total energy: {best_split_energy/3600:.1f} Wh")
+
+
+    
+
+    def to_links(route):
+        route_links = []
+        for i in range(len(route)-1):
+            route_links.append(links[route[i].idx][route[i+1].idx])
+        return route_links
+    
+    return  to_links(single_route), to_links(r1), to_links(r2)
+
+if __name__ == "__main__":
+    main()

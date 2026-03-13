@@ -113,8 +113,8 @@ class MapView(QGraphicsView):
                     pen
                 )
 
-    def draw_path(self, path, scale = 1):
-        pen = QPen(QColor(0, 200, 0))
+    def draw_path(self, path, color = QColor(0, 200, 0), scale = 1):
+        pen = QPen(color)
         pen.setWidth(1)
 
         for i in range(len(path)-1):

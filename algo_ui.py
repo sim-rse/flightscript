@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap, QPen, QBrush, QColor, QPolygonF
 from UI_ressources import MapView
 from pointlib import *
 
-from algo import get_links_and_dist
+from algo import get_links_and_dist, main
 
 SCALE = 5
 
@@ -41,21 +41,25 @@ class CustomWindow(GUI.Ui_MainWindow):
         links_matrix, _ = get_links_and_dist(waypoints,nofly)
         n = len(links_matrix)
         # draw links
-        for i in range(n):
+        """for i in range(n):
         #only iterating for the upper triangle of the matrix (and doing the lower at the same time)
             for j in range(i+1,n):      #i+1 for skipping the diagonal
                 self.graphicsView.draw_path(links_matrix[i][j].path, scale=SCALE)
-
+"""
         for point in waypoints:
             self.graphicsView.draw_point(point, QColor("blue"), 8,text=True,scale=SCALE)
 
         self.graphicsView.draw_point(BASE, QColor("orange"), 8,scale=SCALE)
 
-        self.graphicsView.draw_point(WayPoint(10,0,coord_type="xy", name="x"), QColor("green"),size=4, text=True,scale=SCALE)
-        self.graphicsView.draw_point(WayPoint(0,10,coord_type="xy", name="y"), QColor("green"),size=4, text=True,scale=SCALE)
-        self.graphicsView.draw_point(Point(0,0,"xy"), QColor("green"),size=4,scale=SCALE)
-
         #self.graphicsView.fitInView(self.graphicsView.scene_.itemsBoundingRect())
+
+        main_route, r1,r2 = main()
+        self.draw_route(main_route)
+        #self.draw_route(r2)
+
+    def draw_route(self, route):
+        for link in route:
+            self.graphicsView.draw_path(link.path, color=QColor(0, 0, 200),scale=SCALE)
 
        
 
