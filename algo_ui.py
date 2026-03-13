@@ -35,7 +35,7 @@ class CustomWindow(GUI.Ui_MainWindow):
 
         # draw zones
         for zone in nofly:
-            self.graphicsView.draw_zone(zone.inflated(2), scale=SCALE)
+            self.graphicsView.draw_zone(zone.inflated(2), scale=SCALE, text=False)
             self.graphicsView.draw_zone(zone, color= QColor(0,255,0), scale=SCALE)
 
         links_matrix, _ = get_links_and_dist(waypoints,nofly)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     
     MainWindow = QMainWindow()
     MainWindow.show()
-
+    MainWindow.setWindowTitle("Flight route calculator - Premium edition")
     ui = CustomWindow()
     ui.setupUi(MainWindow)
 
