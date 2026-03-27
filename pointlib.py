@@ -5,6 +5,8 @@ import json
 from rich import print
 import sys
 
+ZONEMARGIN = 2
+
 def loadWaypoints(path):
     with open(path,'r') as file:
         dump = json.load(file)
@@ -27,6 +29,8 @@ def loadWaypoints(path):
         noFlyZones = dump["NoFlyZones"]
         zones = []
         for idx in noFlyZones:
+            if noFlyZones[idx]["ignore"]:
+                continue
             bounds_list = noFlyZones[idx]["bounds"]
             bounds = []
             for point in bounds_list:
@@ -342,7 +346,7 @@ class Link:
             self.path = [start, end]
             return
 
-        margin = 2
+        margin = ZONEMARGIN
         noflyzones = [zone.inflated(margin) for zone in noflyzones] #makes new, slightly bigger noflyzones so you don't touch the corners of the zone
 
         #for zone in noflyzones:

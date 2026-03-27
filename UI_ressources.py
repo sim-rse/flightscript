@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QGraphicsView, QGraphicsScene
 )
 from PyQt6.QtGui import (
-    QPixmap, QPen, QBrush, QColor, QPolygonF
+    QPixmap, QPen, QBrush, QColor, QPolygonF, QPainter
 )
 from PyQt6.QtCore import Qt, QPointF
 import pointlib
@@ -30,8 +30,8 @@ def draw_zone(scene:QGraphicsScene, zone):
 
 class MapView(QGraphicsView):
 
-    def __init__(self, parent = None):
-        super().__init__(parent = parent)
+    def __init__(self, *args, grid_size = 400, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.scene_ = QGraphicsScene()
         self.setScene(self.scene_)
@@ -40,7 +40,36 @@ class MapView(QGraphicsView):
 
         # enable panning
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        
+        self.grid_size = grid_size  # size of each cell (5x5 pixels)
+
+    def drawBackground(self, painter: QPainter, rect):
+        super().drawBackground(painter, rect)
+
+        # Set grid appearance
+        pen = QPen(QColor(200, 200, 200))
+        pen.setWidth(0)  # cosmetic pen (stays thin when zooming)
+        painter.setPen(pen)
+
+        left = int(rect.left())
+        right = int(rect.right())
+        top = int(rect.top())
+        bottom = int(rect.bottom())
+
+        # Align grid to origin
+        first_x = left - (left % self.grid_size)
+        first_y = top - (top % self.grid_size)
+
+        # Draw vertical lines
+        x = first_x
+        while x <= right:
+            painter.drawLine(x, top, x, bottom)
+            x += self.grid_size
+
+        # Draw horizontal lines
+        y = first_y
+        while y <= bottom:
+            painter.drawLine(left, y, right, y)
+            y += self.grid_size
 
     # zoom
     def wheelEvent(self, event):
