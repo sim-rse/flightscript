@@ -50,6 +50,8 @@ def loadsettings(path):
     
     return dump["settings"]
 
+
+
 def orientation(a, b, c):
     val = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y)
     if abs(val) < 1e-9:

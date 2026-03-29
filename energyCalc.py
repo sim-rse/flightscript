@@ -1,7 +1,10 @@
 import math
+import settings
 
 # CONSTANTEN
 g = 9.81
+
+#vv unused vv
 CD = 1.0
 RHO = 1.225
 A = 0.05
@@ -19,13 +22,13 @@ def lift_vert(mass):
 
 
 def total_thrust():
-    return MAXLIFT * MOTORS
+    return settings.MAXLIFT * settings.MOTORS
 
 
 # --- VERSNELLINGEN ---
 
 def a_hor(mass):
-    thrust_h = total_thrust() * math.sin(math.radians(KANTELHOEK))
+    thrust_h = total_thrust() * math.sin(math.radians(settings.KANTELHOEK))
     return thrust_h / mass
 
 
@@ -37,8 +40,8 @@ def a_vert(mass):
 # --- MAXIMALE SNELHEDEN ---
 
 def v_hor(mass):
-    thrust_h = total_thrust() * math.sin(math.radians(KANTELHOEK))
-    return math.sqrt((2 * thrust_h) / (CD * RHO * A))
+    thrust_h = total_thrust() * math.sin(math.radians(settings.KANTELHOEK))
+    return math.sqrt((2 * thrust_h) / (settings.CD * settings.RHO * settings.A))
 
 
 def v_vert(mass):
@@ -48,7 +51,7 @@ def v_vert(mass):
     if F <= 0:
         return 0
 
-    return math.sqrt((2 * F) / (CD * RHO * A))
+    return math.sqrt((2 * F) / (settings.CD * settings.RHO * settings.A))
 
 
 # --- TIJD BEREKENING ---

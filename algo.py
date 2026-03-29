@@ -6,24 +6,21 @@ from rich import print
 from energyCalc import *
 import settings
 # =========================
-# USER PARAMETERS
+# USER PARAMETERS (unused)
 # =========================
-if __name__ == "__main__":
-    EMPTY_MASS = 1.562  # kg
-    BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
-    MAX_PAYLOAD = 0.6
 
-    # --- Flight profile ---
-    CRUISE_ALTITUDE = 30
-    SAFETY_RESERVE = 0.15
-
-    # --- needed for acceleration calculations etc in energyCalc.py---
-    CD = 1
-    RHO = 1.225
-    KANTELHOEK = 20
-    A = 0.05
-
-    MAXLIFT = 7.87696893
+EMPTY_MASS = 1.562  # kg
+BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
+MAX_PAYLOAD = 0.6
+# --- Flight profile ---
+CRUISE_ALTITUDE = 30
+SAFETY_RESERVE = 0.15
+# --- needed for acceleration calculations etc in energyCalc.py---
+CD = 1
+RHO = 1.225
+KANTELHOEK = 20
+A = 0.05
+MAXLIFT = 7.87696893
 
 # --- Loading Waypoints and selecting BASE ---
 waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")       #wordt enkel gebruikt indien je algo.py runt voor het pad van het GUI programma moet je in algo_gui.py de pad veranderen!
