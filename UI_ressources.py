@@ -158,3 +158,9 @@ class MapView(QGraphicsView):
 
     def clear(self):
         self.scene_.clear()
+    
+    def resetview(self):
+        self.scene_.setSceneRect(self.scene_.itemsBoundingRect())
+        self.resetTransform()
+        self.fitInView(self.scene_.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.ensureVisible(0, 0, 0, 0)  # optional

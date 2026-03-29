@@ -9,21 +9,21 @@ from energyCalc import *
 # USER PARAMETERS
 # =========================
 
-EMPTY_MASS = 1.5691  # kg
+EMPTY_MASS = 1.562  # kg
 BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
 MAX_PAYLOAD = 0.6
 
 # --- Flight profile ---
-CRUISE_ALTITUDE = 30.0
+CRUISE_ALTITUDE = 30
 SAFETY_RESERVE = 0.15
 
-# --- needed for acceleration calculations etc in mathematics.py---
-CD = 1
+# --- needed for acceleration calculations etc in energyCalc.py---
+"""CD = 1
 RHO = 1.225
 KANTELHOEK = 20
 A = 0.05
 
-MAXLIFT = 7.87696893
+MAXLIFT = 7.87696893"""     #You need to set this in energycalc.py!!
 
 # --- Loading Waypoints and selecting BASE ---
 waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")       #wordt enkel gebruikt indien je algo.py runt voor het pad van het GUI programma moet je in algo_gui.py de pad veranderen!
@@ -170,13 +170,38 @@ def mission_energy(waypoints:tuple, BASE):
     
     route = breadth_first(waypoints, BASE)
     if route is None:
-        return None, None
+        return None, []
 
     energy = route_energy(route)
     return energy, route
 
 
+def print_partial_energies(route, title:str = None):
+    if type(title) is str:
+        print("=========",title.upper(),"=========")
+
+    print('----------partial energies----------')
+    energy, partial = route_energy(route,True)
+    for name, energy in partial:
+        print(f"Energy for link \"{name}\":  {energy/3600:.3f} Wh")
+    print('------------------------------------')
+    print(f"Total Energy: {energy/3600:.1f} Wh")
+
 def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
+
+    """config = {
+    "EMPTY_MASS": EMPTY_MASS,
+    "BATTERY_ENERGY": BATTERY_ENERGY,
+    "MAX_PAYLOAD": MAX_PAYLOAD,
+    "CRUISE_ALTITUDE": CRUISE_ALTITUDE,
+    "SAFETY_RESERVE": SAFETY_RESERVE,
+    "CD": CD,
+    "RHO": RHO,
+    "KANTELHOEK": KANTELHOEK,
+    "A": A,
+    "MAXLIFT": MAXLIFT
+    }"""
+
     global links, distance_matrix
     links, distance_matrix = get_links_and_dist(all_waypoints, noflyzones_)
 
@@ -195,6 +220,9 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
 
     #split seach only splits the payload in two groups for now
     iteration = 0
+
+    e1, r1 = 0, []
+    e2, r2 = 0,[]
     for r in range(1, len(all_waypoints)-1):                      #just a brute force to find lowest energy consumption. should be fine bc we only have 7 hospitals
         noBase = [point for point in all_waypoints if point != BASE] #we're removing the base to make combinations as it needs to be added in both routes later on, but as combinations are random, base could be added two both and we don't want it twice in any of the two combinations
         for combo in itertools.combinations(noBase, r):
@@ -236,12 +264,7 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
     print("===== SINGLE MISSION =====")
     if single_route is not None:
         print(f"Best route: {list(single_route)}")
-        print('----------partail energies----------')
-        _, partial = route_energy(single_route,True)
-        for name, energy in partial:
-            print(f"Energy for link \"{name}\":  {energy/3600:.3f} Wh")
-        print('------------------------------------')
-        print(f"Total Energy: {single_energy/3600:.1f} Wh")
+        print_partial_energies(single_route)
 
         if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
             print("❌ Not feasible")
@@ -253,6 +276,10 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
         print("best split iteration: ", best_split_iteration)
         print("Group 1:", list(best_split[2]))
         print("Group 2:", list(best_split[3]))
+
+        print_partial_energies(best_split[2], "split 1")
+        print_partial_energies(best_split[3], "split 2")
+
         print(f"Total energy: {best_split_energy/3600:.1f} Wh")
 
 
@@ -261,9 +288,8 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
     def to_links(route):
         route_links = []
         for i in range(len(route)-1):
-            route_links.append(links[route[i].idx][route[i+1].idx])
+            route_links.append(links[route[i].idx, route[i+1].idx])
         return route_links
-    
     return  to_links(single_route), to_links(r1), to_links(r2)
 
 if __name__ == "__main__":

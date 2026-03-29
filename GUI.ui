@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Flight route calculator - Premium edition</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>ressources/icon.png</normaloff>ressources/icon.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
     <string notr="true">#centralwidget{background-color: rgb(231, 231, 231);border-top: 1px solid rgb(191, 191, 191)}</string>
@@ -52,7 +56,7 @@
       <x>10</x>
       <y>10</y>
       <width>261</width>
-      <height>361</height>
+      <height>371</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -66,7 +70,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>0</y>
+        <y>10</y>
         <width>71</width>
         <height>16</height>
        </rect>
@@ -79,7 +83,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>130</y>
+        <y>140</y>
         <width>71</width>
         <height>16</height>
        </rect>
@@ -92,7 +96,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>20</y>
+        <y>30</y>
         <width>241</width>
         <height>101</height>
        </rect>
@@ -173,8 +177,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
           </property>
           <property name="icon">
            <iconset>
-            <normalon>gear.png</normalon>
-           </iconset>
+            <normaloff>ressources/gear.png</normaloff>ressources/gear.png</iconset>
           </property>
          </widget>
          <widget class="QPushButton" name="pushButton_17">
@@ -198,7 +201,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>150</y>
+        <y>160</y>
         <width>241</width>
         <height>91</height>
        </rect>
@@ -292,8 +295,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
           </property>
           <property name="icon">
            <iconset>
-            <normalon>gear.png</normalon>
-           </iconset>
+            <normaloff>ressources/gear.png</normaloff>ressources/gear.png</iconset>
           </property>
          </widget>
         </widget>
@@ -304,7 +306,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>250</y>
+        <y>260</y>
         <width>241</width>
         <height>81</height>
        </rect>
@@ -366,7 +368,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
         <x>10</x>
         <y>10</y>
         <width>231</width>
-        <height>341</height>
+        <height>331</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -577,7 +579,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     <property name="geometry">
      <rect>
       <x>80</x>
-      <y>380</y>
+      <y>390</y>
       <width>191</width>
       <height>22</height>
      </rect>
@@ -597,8 +599,8 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>380</y>
-      <width>131</width>
+      <y>390</y>
+      <width>61</width>
       <height>21</height>
      </rect>
     </property>
@@ -621,6 +623,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
      <string>File</string>
     </property>
     <addaction name="actionLoad_project"/>
+    <addaction name="actionReload_project"/>
     <addaction name="actionSave_project"/>
     <addaction name="actionExport_to_Qground_wip"/>
    </widget>
@@ -644,7 +647,12 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Export to Qground (wip)</string>
+    <string>Export to Qground</string>
+   </property>
+  </action>
+  <action name="actionReload_project">
+   <property name="text">
+    <string>Reload project</string>
    </property>
   </action>
  </widget>

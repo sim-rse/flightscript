@@ -6,7 +6,7 @@ from rich import print
 import sys
 
 
-def loadWaypoints(path, general_margin = 200):
+def loadWaypoints(path, general_margin = 0):
     with open(path,'r') as file:
         dump = json.load(file)
 
