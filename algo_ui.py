@@ -7,10 +7,7 @@ from UI_ressources import MapView
 from pointlib import *
 
 from algo import get_links_and_dist, main
-import algo
-import energyCalc
-SCALE = 0.1
-DRAW_LINKS = False
+import settings
 
 class CustomWindow(GUI.Ui_MainWindow):
     def __init__(self):
@@ -30,10 +27,10 @@ class CustomWindow(GUI.Ui_MainWindow):
     def loadFile(self, path):
         if path:
             self.settings = loadsettings(path)
-            global SCALE
-            SCALE = self.settings["scale"]
+            settings.SCALE = self.settings["scale"]
+            settings.MARGIN = self.settings["margin"]
 
-            self.waypoints, self.noflyzones, self.BASE = loadWaypoints(path, self.settings["margin"])
+            self.waypoints, self.noflyzones, self.BASE = loadWaypoints(path, settings.MARGIN)
 
     def globalUpdate(self, fileJustLoaded = False):
         self.updatePoints()
@@ -49,9 +46,22 @@ class CustomWindow(GUI.Ui_MainWindow):
 
         self.startButton.clicked.connect(self.startSim)
         self.zoneMargin.textEdited.connect(self.margin_text_changed)
-
         self.actionLoad_project.triggered.connect(self.loadProject)
         self.actionReload_project.triggered.connect(self.reloadProject)
+
+        self.menubar.setStyleSheet("""
+QMenuBar {
+    font-size: 12px;          /* smaller text */
+}
+
+QMenuBar::item {
+    padding: 2px 10px;        /* reduce vertical + horizontal padding */
+    margin: 0px;
+}
+
+QMenuBar::item:selected {
+    background: #ccc;
+}""")
         self.globalUpdate()
 
     def margin_text_changed(self,text):
@@ -80,35 +90,21 @@ class CustomWindow(GUI.Ui_MainWindow):
 
     def startSim(self):
 
-        algo.EMPTY_MASS = float(self.emptyMass.text())  # kg
-        algo.BATTERY_ENERGY = float(self.batteryCap.text()) * 3600  #multiply Wh by 3600 to get the energy in Joules
-        algo.MAX_PAYLOAD = float(self.maxPayload.text())
+        settings.EMPTY_MASS = float(self.emptyMass.text())  # kg
+        settings.BATTERY_ENERGY = float(self.batteryCap.text()) * 3600  #multiply Wh by 3600 to get the energy in Joules
+        settings.MAX_PAYLOAD = float(self.maxPayload.text())
 
-        # --- Flight profile ---
-        algo.CRUISE_ALTITUDE = float(self.cruiseAlt.text())
-        algo.SAFETY_RESERVE = float(self.safetyMargin.text())
+        settings.CRUISE_ALTITUDE = float(self.cruiseAlt.text())
+        settings.SAFETY_RESERVE = float(self.safetyMargin.text())
 
-        # --- needed for acceleration calculations etc in mathematics.py---
-        energyCalc.CD = float(self.cd.text())
-        energyCalc.RHO = float(self.rho.text())
-        energyCalc.KANTELHOEK = float(self.kantelhoek.text())
-        energyCalc.A = float(self.area.text())
+        settings.CD = float(self.cd.text())
+        settings.RHO = float(self.rho.text())
+        settings.KANTELHOEK = float(self.kantelhoek.text())
+        settings.A = float(self.area.text())
 
-        energyCalc.MAXLIFT = float(self.maxLift.text())
+        settings.MAXLIFT = float(self.maxLift.text())
 
-        """config = {
-                    "EMPTY_MASS": float(self.emptyMass.text()),
-                    "BATTERY_ENERGY": float(self.batteryCap.text()) * 3600,
-                    "MAX_PAYLOAD": float(self.maxPayload.text()),
-                    "CRUISE_ALTITUDE": float(self.cruiseAlt.text()),
-                    "SAFETY_RESERVE": float(self.safetyMargin.text()),
-                    "CD": float(self.cd.text()),
-                    "RHO": float(self.rho.text()),
-                    "KANTELHOEK": float(self.kantelhoek.text()),
-                    "A": float(self.area.text()),
-                    "MAXLIFT": float(self.maxLift.text())
-                }"""
-
+        #calculations
         main_route, r1,r2 = main(self.waypoints,self.noflyzones, self.BASE)
         
         self.make_graph()
@@ -162,7 +158,7 @@ class CustomWindow(GUI.Ui_MainWindow):
             gearButton = QtWidgets.QPushButton(parent=widget)
             gearButton.setGeometry(QtCore.QRect(170, 0, 31, widget_height))
             gearButton.setText("")
-            gearButton.clicked.connect(lambda: print(algo.EMPTY_MASS, ))
+            gearButton.clicked.connect(lambda: print(settings.EMPTY_MASS, ))
             deleteButton = QtWidgets.QPushButton(parent=widget)
             deleteButton.setGeometry(QtCore.QRect(195, 0, 31, widget_height))
             deleteButton.setText("X")
@@ -210,7 +206,7 @@ class CustomWindow(GUI.Ui_MainWindow):
             gearButton.setIcon(icon)
 
             y+=31
-            widget.show()       #else they don't swot up after a second update
+            widget.show()       #else they don't show up after a second update
         self.noflyzonesFrame.setGeometry(QtCore.QRect(0, 0, 241, y))
         self.scrollAreaWidgetContents_2.setMinimumSize(QtCore.QSize(0, y))
 
@@ -230,36 +226,33 @@ class CustomWindow(GUI.Ui_MainWindow):
         
         # draw zones
         for zone in self.noflyzones:
-            self.graphicsView.draw_zone(zone.margin_zone, scale=SCALE, text=False)
-            self.graphicsView.draw_zone(zone, color= QColor(0,255,0), scale=SCALE)
+            self.graphicsView.draw_zone(zone.margin_zone, scale=settings.SCALE, text=False)
+            self.graphicsView.draw_zone(zone, color= QColor(0,255,0), scale=settings.SCALE)
 
         links_matrix, _ = get_links_and_dist(self.waypoints,self.noflyzones)
         n = len(links_matrix)
 
-        if DRAW_LINKS:
+        if settings.DRAW_LINKS:
             # draw links
             for i in range(n):
             #only iterating for the upper triangle of the matrix (and doing the lower at the same time)
                 for j in range(i+1,n):      #i+1 for skipping the diagonal
-                    self.graphicsView.draw_path(links_matrix[i][j].path, scale=SCALE)
+                    self.graphicsView.draw_path(links_matrix[i][j].path, scale=settings.SCALE)
 
         for point in self.waypoints:
-            self.graphicsView.draw_point(point, QColor("blue"), 8,text=True,scale=SCALE)
+            self.graphicsView.draw_point(point, QColor("blue"), 8,text=True,scale=settings.SCALE)
 
-        self.graphicsView.draw_point(self.BASE, QColor("orange"), 8,scale=SCALE)
+        self.graphicsView.draw_point(self.BASE, QColor("orange"), 8,scale=settings.SCALE)
 
         
 
         if fileJustLoaded:
             #resets transform (scroll) & cursor
-            self.graphicsView.resetview()
-            #self.graphicsView.resetTransform()            
-            #self.graphicsView.fitInView(self.graphicsView.scene_.itemsBoundingRect())
-            #self.graphicsView.ensureVisible(0, 0, 0, 0)  # optional
+            self.graphicsView.resetview()       #see UI_ressources.py !
 
     def draw_route(self, route, color = QColor(0, 0, 200)):
         for link in route:
-            self.graphicsView.draw_path(link.path, color=color,scale=SCALE)
+            self.graphicsView.draw_path(link.path, color=color,scale=settings.SCALE)
     
     def draw_routes(self, routes):
         colors = [QColor(0,200,200), QColor(200,200,200), QColor(200,200,0), QColor(200,0,200),QColor(100,200,100)]

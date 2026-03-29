@@ -619,6 +619,12 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
     <property name="title">
      <string>File</string>
     </property>

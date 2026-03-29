@@ -4,26 +4,26 @@ from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from pointlib import loadWaypoints, WayPoint, Link, NoFlyZone
 from rich import print
 from energyCalc import *
-
+import settings
 # =========================
 # USER PARAMETERS
 # =========================
+if __name__ == "__main__":
+    EMPTY_MASS = 1.562  # kg
+    BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
+    MAX_PAYLOAD = 0.6
 
-EMPTY_MASS = 1.562  # kg
-BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
-MAX_PAYLOAD = 0.6
+    # --- Flight profile ---
+    CRUISE_ALTITUDE = 30
+    SAFETY_RESERVE = 0.15
 
-# --- Flight profile ---
-CRUISE_ALTITUDE = 30
-SAFETY_RESERVE = 0.15
+    # --- needed for acceleration calculations etc in energyCalc.py---
+    CD = 1
+    RHO = 1.225
+    KANTELHOEK = 20
+    A = 0.05
 
-# --- needed for acceleration calculations etc in energyCalc.py---
-"""CD = 1
-RHO = 1.225
-KANTELHOEK = 20
-A = 0.05
-
-MAXLIFT = 7.87696893"""     #You need to set this in energycalc.py!!
+    MAXLIFT = 7.87696893
 
 # --- Loading Waypoints and selecting BASE ---
 waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")       #wordt enkel gebruikt indien je algo.py runt voor het pad van het GUI programma moet je in algo_gui.py de pad veranderen!
@@ -36,27 +36,23 @@ def power_required(lift):
     return 1.231073846*(lift**2) + 7.431724825*lift - 2.405185698       #quadratic regression of power in function of the lift (from experimental results)
     #return A * (mass ** 1.5) + B
 
-def climb_energy(mass):
-    power_to_counter_grav = power_required(lift_vert(mass))
-    
+def climb_energy(mass):    
     a_v, v_v = a_vert(mass), v_vert(mass)
     d_v = a_v
 
-    T_up = travel_time(CRUISE_ALTITUDE, v_v, a_v)
+    T_up = travel_time(settings.CRUISE_ALTITUDE, v_v, a_v)
 
     lift = (a_v+d_v)*mass
-    #t = CRUISE_ALTITUDE / CLIMB_RATE
+    #t = settings.CRUISE_ALTITUDE / CLIMB_RATE
     return power_required(lift) * T_up
 
 def descent_energy(mass):
-    power_to_counter_grav = power_required(lift_vert(mass))
-
     a_v, v_v = a_vert(mass), v_vert(mass)
     d_v = a_v
-    T_down = travel_time(CRUISE_ALTITUDE, v_v, a_v)
+    T_down = travel_time(settings.CRUISE_ALTITUDE, v_v, a_v)
 
     lift = (a_v+d_v)*mass
-    #t = CRUISE_ALTITUDE / DESCENT_RATE
+    #t = settings.CRUISE_ALTITUDE / DESCENT_RATE
     return power_required(lift) * T_down
 
 def energy_for_leg(distance, mass):
@@ -104,7 +100,7 @@ def route_energy(route, return_partial_energies = False):
     #print(f"[route_energy] Route: {route} waypoints: {waypoints}")
     payload_subset = [point.payload for point in route]     #the total payload list needed for this route
     remaining_payload = sum(payload_subset)
-    total_mass = EMPTY_MASS + remaining_payload
+    total_mass = settings.EMPTY_MASS + remaining_payload
 
     if return_partial_energies:
         partial = []
@@ -132,7 +128,7 @@ def route_energy(route, return_partial_energies = False):
             partial.append((f"{a.name} - {b.name}", partial_energy))
 
         remaining_payload -= b.payload              #the last waypoint is back to the origin, but the payload there is 0 so no problem
-        total_mass = EMPTY_MASS + remaining_payload
+        total_mass = settings.EMPTY_MASS + remaining_payload
         
         if i+1 != len(route):       #won't take off at the last step
             #take off again
@@ -190,7 +186,7 @@ def print_partial_energies(route, title:str = None):
 def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
 
     """config = {
-    "EMPTY_MASS": EMPTY_MASS,
+    "EMPTY_MASS": settings.EMPTY_MASS,
     "BATTERY_ENERGY": BATTERY_ENERGY,
     "MAX_PAYLOAD": MAX_PAYLOAD,
     "CRUISE_ALTITUDE": CRUISE_ALTITUDE,
@@ -234,9 +230,9 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
             #print(f"[split search]\ncombo {tuple(combo)}\ncombo_new {tuple(combo_new)}\nother {tuple(other)}")
             combo_payload = sum(point.payload for point in combo_new)
             other_payload = sum(point.payload for point in other)
-            if combo_payload > MAX_PAYLOAD or other_payload > MAX_PAYLOAD:
+            if combo_payload > settings.MAX_PAYLOAD or other_payload > settings.MAX_PAYLOAD:
                 #print(f"[green]info[/green] skipping following combinations: combo {combo_new} other {other} \n[red]reason[/red]:",end="")
-                #print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {MAX_PAYLOAD}")
+                #print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {settings.MAX_PAYLOAD}")
                 continue            #skips the calculations completely if the maximum payload is reached (you can't fly anyways)
 
             e1, r1 = mission_energy(combo_new, BASE)
@@ -266,7 +262,7 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
         print(f"Best route: {list(single_route)}")
         print_partial_energies(single_route)
 
-        if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
+        if single_energy > settings.BATTERY_ENERGY * (1 - settings.SAFETY_RESERVE):
             print("❌ Not feasible")
         else:
             print("✅ Feasible")
