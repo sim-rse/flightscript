@@ -5,14 +5,15 @@ import json
 from rich import print
 import sys
 
-ZONEMARGIN = 2
 
-def loadWaypoints(path):
+def loadWaypoints(path, general_margin = 200):
     with open(path,'r') as file:
         dump = json.load(file)
 
         waypoints = dump["Waypoints"]
         pointlist = []
+        bases = [waypoints[idx] for idx in waypoints if waypoints[idx]["type"]=="base"]     #should be only one
+        origin = bases[0]["position"]
         for idx in waypoints:
             coord1 = waypoints[idx]["position"][0]
             coord2 = waypoints[idx]["position"][1]
@@ -20,7 +21,7 @@ def loadWaypoints(path):
             payload = waypoints[idx]["payload"]
             point_type = waypoints[idx]["type"]
             
-            point = WayPoint(coord1, coord2, payload, name=name, idx=int(idx))
+            point = WayPoint(coord1, coord2, payload, name=name, idx=int(idx), origin_lat=origin[0], origin_lon=origin[1])
             if point_type == "base":
                 base = point
 
@@ -34,14 +35,20 @@ def loadWaypoints(path):
             bounds_list = noFlyZones[idx]["bounds"]
             bounds = []
             for point in bounds_list:
-                bounds.append(Point(point[0],point[1]))
+                bounds.append(Point(point[0],point[1],origin_lat=origin[0], origin_lon=origin[1]))
             name = noFlyZones[idx]["name"]
-            zones.append(NoFlyZone(bounds,idx, name))
+            margin = noFlyZones[idx].get("margin", general_margin) #if there's no "margin" key the general value applies
+            zones.append(NoFlyZone(bounds,idx, name, margin))
         
         
 
     return pointlist, zones, base
 
+def loadsettings(path):
+    with open(path,'r') as file:
+        dump = json.load(file)
+    
+    return dump["settings"]
 
 def orientation(a, b, c):
     val = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y)
@@ -131,13 +138,17 @@ def shortest_path(graph, start, goal):
                 heapq.heappush(pq, (new_dist, id(neigh), neigh))
 
     # reconstruct path
-    path = []
-    cur = goal
-    while cur != start:
-        path.append(cur)
-        cur = prev[cur]
-    path.append(start)
-    path.reverse()
+    try:
+        path = []
+        cur = goal
+        while cur != start:
+            path.append(cur)
+            cur = prev[cur]
+        path.append(start)
+        path.reverse()
+    except KeyError as e:
+        print(f"\nGot a keyerror while building visibility graph. It's most likely due to a waypoint being inside a noflyzone. Try removing zones or reduce their margin around the following point:\n{e}")
+        exit()
     return path
 
 def normalize(x, y):
@@ -275,12 +286,31 @@ class WayPoint(Point):
         return f"Waypoint \"{self.name}\" @ x = {self.x:.3f}, y = {self.y:.3f}"
 
 class NoFlyZone:
-    def __init__(self, bounds: list, idx = -1, name = "no fly zone"):
+    def __init__(self, bounds: list, idx = -1, name = "no fly zone", margin = 0, origin_lat=50.9405, origin_lon=4.21039):
         if is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
             bounds = list(reversed(bounds))
         self.bounds = bounds        #list with the coordinates of the corners in order
         self.idx = idx
         self.name = name
+        self.margin = margin
+        
+        if margin:
+            self.fixedvalue = True
+        else:
+            self.fixedvalue = False
+        
+    #vv niet de beste manier ma bon het werkt vv
+    @property
+    def margin(self):
+         return self.margin_
+    
+    @margin.setter
+    def margin(self, arg):
+        self.margin_ = arg
+        if arg != 0:
+            self.margin_zone = self.inflated(self.margin)
+        else:
+            self.margin_zone = self
     
     def intersects_segment(self, p1:Point, p2:Point):
         n = len(self.bounds)
@@ -345,9 +375,8 @@ class Link:
         if not noflyzones:
             self.path = [start, end]
             return
-
-        margin = ZONEMARGIN
-        noflyzones = [zone.inflated(margin) for zone in noflyzones] #makes new, slightly bigger noflyzones so you don't touch the corners of the zone
+        
+        noflyzones = [zone.margin_zone for zone in noflyzones] #makes new, slightly bigger noflyzones so you don't touch the corners of the zone
 
         #for zone in noflyzones:
         #        print(zone)
@@ -356,7 +385,9 @@ class Link:
         graph = build_visibility_graph(nodes, noflyzones)
         self.path = shortest_path(graph, start, end)
 
-        #plot_scene(start, goal, noflyzones, link=self, show_graph=False, graph=graph)
+        if __name__ == "__main__":
+            plot_scene(start, goal, noflyzones, link=self, show_graph=False, graph=graph)
+            ...
 
     def length(self):
         i=0
@@ -372,14 +403,14 @@ if __name__ == "__main__":
     noFlyZones = [
         NoFlyZone([
             Point(10,20,"xy"),
-            Point(20,20,"xy"),
-            Point(20,10,"xy"),
-            Point(10,10,"xy")
+            Point(30,15,"xy"),
+            Point(20,5,"xy"),
+            Point(9,8,"xy")
         ]),
         NoFlyZone([
             Point(5,7,"xy"),
-            Point(40,7,"xy"),
-            Point(40,3,"xy"),
+            Point(25,7,"xy"),
+            Point(25,3,"xy"),
             Point(5,3,"xy")
         ])
     ]

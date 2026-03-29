@@ -155,3 +155,6 @@ class MapView(QGraphicsView):
                 b.x*scale, -(b.y*scale),
                 pen
             )
+
+    def clear(self):
+        self.scene_.clear()

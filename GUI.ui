@@ -52,7 +52,7 @@
       <x>10</x>
       <y>10</y>
       <width>261</width>
-      <height>381</height>
+      <height>361</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -120,7 +120,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>239</width>
+          <width>240</width>
           <height>99</height>
          </rect>
         </property>
@@ -223,7 +223,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>241</width>
+          <width>240</width>
           <height>91</height>
          </rect>
         </property>
@@ -306,11 +306,11 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
         <x>10</x>
         <y>250</y>
         <width>241</width>
-        <height>91</height>
+        <height>81</height>
        </rect>
       </property>
       <property name="title">
-       <string>Base:</string>
+       <string>Extra:</string>
       </property>
       <widget class="QLineEdit" name="zoneMargin">
        <property name="geometry">
@@ -324,6 +324,9 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
        <property name="text">
         <string>2</string>
        </property>
+       <property name="placeholderText">
+        <string>margin...</string>
+       </property>
       </widget>
       <widget class="QLabel" name="label_3">
        <property name="geometry">
@@ -336,6 +339,19 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
        </property>
        <property name="text">
         <string>no fly zone margin:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_18">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>91</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Base:</string>
        </property>
       </widget>
      </widget>
@@ -519,13 +535,6 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
          </property>
         </widget>
        </item>
-       <item row="7" column="2">
-        <widget class="Line" name="line_2">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
        <item row="12" column="2">
         <widget class="QLabel" name="label_14">
          <property name="text">
@@ -537,6 +546,13 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
         <widget class="QLabel" name="label_21">
          <property name="text">
           <string>Max payload:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2" colspan="2">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
@@ -555,6 +571,39 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     </property>
     <property name="orientation">
      <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="comboBox">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>380</y>
+      <width>191</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Single route</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Two routes</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLabel" name="label_17">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>380</y>
+      <width>131</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Route type:</string>
     </property>
    </widget>
   </widget>
@@ -578,9 +627,6 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
    <addaction name="menuFile"/>
   </widget>
   <action name="actionLoad_project">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Load project</string>
    </property>

@@ -1,4 +1,8 @@
 {
+  "settings": {
+    "scale": 5,
+    "margin": 2
+  },
   "Waypoints": {
     "0": {
       "name": "origin",

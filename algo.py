@@ -7,7 +7,7 @@ from energyCalc import *
 
 # =========================
 # USER PARAMETERS
-# ========================='
+# =========================
 
 EMPTY_MASS = 1.5691  # kg
 BATTERY_ENERGY = 74 * 3600  #multiply Wh by 3600 to get the energy in Joules
@@ -26,7 +26,7 @@ A = 0.05
 MAXLIFT = 7.87696893
 
 # --- Loading Waypoints and selecting BASE ---
-waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")
+waypoints, noflyzones, BASE = loadWaypoints("waypoints.json")       #wordt enkel gebruikt indien je algo.py runt voor het pad van het GUI programma moet je in algo_gui.py de pad veranderen!
 
 # =========================
 # ENERGY MODEL
@@ -94,17 +94,20 @@ def get_links_and_dist(points, noflyzones = []):
             distances[j,i] = dist
 
     return links, distances
-links, distance_matrix = get_links_and_dist(waypoints, noflyzones)
+
 #print(f"Distance matrix: {distance_matrix}")
 # =========================
 # ROUTE ENERGY
 # =========================
 
-def route_energy(route):
+def route_energy(route, return_partial_energies = False):
     #print(f"[route_energy] Route: {route} waypoints: {waypoints}")
     payload_subset = [point.payload for point in route]     #the total payload list needed for this route
     remaining_payload = sum(payload_subset)
     total_mass = EMPTY_MASS + remaining_payload
+
+    if return_partial_energies:
+        partial = []
 
     energy = 0.0
 
@@ -115,6 +118,7 @@ def route_energy(route):
         a:WayPoint = route[i] 
         b:WayPoint = route[i+1]
         #print(f"a :{a}, b: {b}\nindex a :{a.idx} index b: {b.idx}\ntype: {type(a.idx)}")
+        #print(f"distance matrix size: {len(distance_matrix)}\na: {a.idx} b: {b.idx}")
         d = distance_matrix[a.idx, b.idx]
 
         #travelling to waypoint
@@ -123,6 +127,9 @@ def route_energy(route):
         # payload drop
         energy += descent_energy(total_mass)
 
+        if return_partial_energies:
+            partial_energy = climb_energy(total_mass) + energy_for_leg(d,total_mass) + descent_energy(total_mass)
+            partial.append((f"{a.name} - {b.name}", partial_energy))
 
         remaining_payload -= b.payload              #the last waypoint is back to the origin, but the payload there is 0 so no problem
         total_mass = EMPTY_MASS + remaining_payload
@@ -130,46 +137,13 @@ def route_energy(route):
         if i+1 != len(route):       #won't take off at the last step
             #take off again
             energy += climb_energy(total_mass)
-
+    if return_partial_energies:
+        return energy, partial
     return energy
 
 # =========================
 # best path
 # =========================
-
-def iterative_deepening(waypoints, startpoint):         #iterative deepening
-    remaining = [i for i in waypoints if i != startpoint]
-    route = [startpoint]
-    while remaining != []:
-        
-        energy = float("inf")
-
-        for point in remaining:     #depth = 1
-            new_route = route + [point]
-            
-            if len(remaining)<=1:
-                new_energy = route_energy(new_route)
-                if  new_energy < energy:
-                    energy = new_energy
-                    best_new_route = new_route
-            else:
-                remaining2 = [i for i in waypoints if i not in new_route]
-                for point2 in remaining2:       #depth = 2
-                    new_route2  = new_route + [point2]
-                    new_energy = route_energy(new_route2)
-                    if  new_energy < energy:
-                        energy = new_energy
-                        best_new_route = new_route      #only keeps the next row of the best option, we'll reiterate later with that new point and the two next rows  
-        
-        route = best_new_route
-        remaining = [i for i in waypoints if i not in route]
-
-        """print(f"found new best route: {route}")
-        print(f"remaining: {remaining}")
-        input()"""
-
-    route.append(BASE)
-    return route
 
 def breadth_first(waypoints:list, startpoint):
     remaining = [point for point in waypoints if not point == startpoint]
@@ -185,55 +159,16 @@ def breadth_first(waypoints:list, startpoint):
             #print(f"[[red bold]![/red bold]] found new best route: {route}")
     return route
 
-# =========================
-# OR-TOOLS ROUTE
-# =========================
-
-def solve_route(sub_points:tuple, startpoint):
-    
-    #print("Sub points ", sub_points)
-
-    n = len(sub_points)
-    indx = sub_points.index(startpoint)
-    manager = pywrapcp.RoutingIndexManager(n, 1, indx)     #n nodes and we have one drone starting at node 0 (this means the first element in the list we give)
-    routing = pywrapcp.RoutingModel(manager)            #some kind of initialization 
-
-    def distance_callback(from_index, to_index):
-        f = manager.IndexToNode(from_index)
-        t = manager.IndexToNode(to_index)
-        #return int(np.linalg.norm(sub_points[f].coords - sub_points[t].coords) * 1000)    #returns the cost of the travel from f to t
-        return int((distance_matrix[sub_points[f].idx][sub_points[t].idx]) *1000)
-
-    transit_callback_index = routing.RegisterTransitCallback(distance_callback) #tells it to use distance_callback for evaluating cost 
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    )
-
-    solution = routing.SolveWithParameters(search_parameters)
-
-    if solution is None:
-        return None
-
-    index = routing.Start(0)
-    route = []
-    while not routing.IsEnd(index):
-        route.append(sub_points[manager.IndexToNode(index)])
-        index = solution.Value(routing.NextVar(index))
-    route.append(BASE)
-    return route
 
 # =========================
 # MISSION EVALUATION
 # =========================
 
-def mission_energy(waypoints:tuple):
+def mission_energy(waypoints:tuple, BASE):
     if waypoints == []:     #no point of going to nothing (and generates errors)
         return None, []
     
-    route = breadth_first(waypoints,BASE)
+    route = breadth_first(waypoints, BASE)
     if route is None:
         return None, None
 
@@ -241,18 +176,19 @@ def mission_energy(waypoints:tuple):
     return energy, route
 
 
-def main():
+def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
+    global links, distance_matrix
+    links, distance_matrix = get_links_and_dist(all_waypoints, noflyzones_)
+
     # =========================
     # SINGLE SEARCH
     # =========================
-    all_waypoints = waypoints
-
-    single_energy, single_route = mission_energy(all_waypoints)
+    single_energy, single_route = mission_energy(all_waypoints, BASE)
 
     # =========================
     # SPLIT SEARCH
     # =========================
-    print("-------\nstarting split search...\n-------")
+    #print("-------\nstarting split search...\n-------")
 
     best_split_energy = float("inf")
     best_split = None
@@ -275,8 +211,8 @@ def main():
                 #print(f"[red]payload too high:[/red] combo {combo_payload}, other {other_payload}\nmax payload: {MAX_PAYLOAD}")
                 continue            #skips the calculations completely if the maximum payload is reached (you can't fly anyways)
 
-            e1, r1 = mission_energy(combo_new)
-            e2, r2 = mission_energy(other)
+            e1, r1 = mission_energy(combo_new, BASE)
+            e2, r2 = mission_energy(other, BASE)
 
             #print(f"iteration [{iteration}]\ne1: {e1}, r1: {r1}\ne2: {e2}, r2: {r2}")
 
@@ -285,7 +221,7 @@ def main():
 
             total = e1 + e2
 
-            print(f"iteration [{iteration}]  energy: {total/3600:.1f}")
+            #print(f"iteration [{iteration}]  energy: {total/3600:.1f}")
             if total < best_split_energy:
                 best_split_energy = total
                 best_split = (combo_new, other, r1, r2)
@@ -299,7 +235,13 @@ def main():
 
     print("===== SINGLE MISSION =====")
     if single_route is not None:
-        print(f"Energy: {single_energy/3600:.1f} Wh")
+        print(f"Best route: {list(single_route)}")
+        print('----------partail energies----------')
+        _, partial = route_energy(single_route,True)
+        for name, energy in partial:
+            print(f"Energy for link \"{name}\":  {energy/3600:.3f} Wh")
+        print('------------------------------------')
+        print(f"Total Energy: {single_energy/3600:.1f} Wh")
 
         if single_energy > BATTERY_ENERGY * (1 - SAFETY_RESERVE):
             print("❌ Not feasible")
