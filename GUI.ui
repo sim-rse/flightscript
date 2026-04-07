@@ -10,6 +10,12 @@
     <height>527</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
    <string>Flight route calculator - Premium edition</string>
   </property>
@@ -17,7 +23,19 @@
    <iconset>
     <normaloff>ressources/icon.png</normaloff>ressources/icon.png</iconset>
   </property>
+  <property name="iconSize">
+   <size>
+    <width>16</width>
+    <height>16</height>
+   </size>
+  </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <property name="styleSheet">
     <string notr="true">#centralwidget{background-color: rgb(231, 231, 231);border-top: 1px solid rgb(191, 191, 191)}</string>
    </property>
@@ -38,9 +56,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>420</y>
+      <y>433</y>
       <width>261</width>
-      <height>71</height>
+      <height>57</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -56,7 +74,7 @@
       <x>10</x>
       <y>10</y>
       <width>261</width>
-      <height>371</height>
+      <height>384</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -308,54 +326,91 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
         <x>10</x>
         <y>260</y>
         <width>241</width>
-        <height>81</height>
+        <height>94</height>
        </rect>
       </property>
       <property name="title">
        <string>Extra:</string>
       </property>
-      <widget class="QLineEdit" name="zoneMargin">
-       <property name="geometry">
-        <rect>
-         <x>122</x>
-         <y>20</y>
-         <width>113</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>2</string>
-       </property>
-       <property name="placeholderText">
-        <string>margin...</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_3">
-       <property name="geometry">
-        <rect>
-         <x>8</x>
-         <y>20</y>
-         <width>101</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>no fly zone margin:</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_18">
+      <widget class="QWidget" name="gridLayoutWidget_2">
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>50</y>
-         <width>91</width>
-         <height>16</height>
+         <y>20</y>
+         <width>221</width>
+         <height>71</height>
         </rect>
        </property>
-       <property name="text">
-        <string>Base:</string>
-       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="zoneMargin">
+          <property name="text">
+           <string>2</string>
+          </property>
+          <property name="placeholderText">
+           <string>margin...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>no fly zone margin:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_18">
+          <property name="text">
+           <string>Base:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_19">
+          <property name="text">
+           <string>TextLabel</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
+     </widget>
+     <widget class="QPushButton" name="addPointButton">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>8</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>6</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>add point</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="addZoneButton">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>138</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>6</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>add zone</string>
+      </property>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_2">
@@ -579,7 +634,7 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
     <property name="geometry">
      <rect>
       <x>80</x>
-      <y>390</y>
+      <y>403</y>
       <width>191</width>
       <height>22</height>
      </rect>
@@ -594,12 +649,17 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
       <string>Two routes</string>
      </property>
     </item>
+    <item>
+     <property name="text">
+      <string>Both</string>
+     </property>
+    </item>
    </widget>
    <widget class="QLabel" name="label_17">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>390</y>
+      <x>11</x>
+      <y>403</y>
       <width>61</width>
       <height>21</height>
      </rect>
@@ -618,13 +678,13 @@ background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0
      <height>22</height>
     </rect>
    </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <widget class="QMenu" name="menuFile">
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
     <property name="title">
      <string>File</string>
     </property>

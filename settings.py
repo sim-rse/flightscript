@@ -13,3 +13,5 @@ A = 0.05
 MAXLIFT = 7.87696893 # per motor
 MOTORS = 4
 MARGIN = 2
+ORIGIN = (54.0,8.0)
+ROUTETYPE = "all"

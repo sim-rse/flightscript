@@ -1,12 +1,13 @@
 import GUI
+import addPointDialog as dlg
 from pointlib import *
 from PyQt6 import QtWidgets, QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QDialog, QMessageBox
 from PyQt6.QtGui import QPixmap, QPen, QBrush, QColor, QPolygonF
 from UI_ressources import MapView
 from pointlib import *
 
-from algo import get_links_and_dist, main
+from algo import get_links_and_dist, main, cls
 import settings
 
 class CustomWindow(GUI.Ui_MainWindow):
@@ -26,6 +27,7 @@ class CustomWindow(GUI.Ui_MainWindow):
 
     def loadFile(self, path):
         if path:
+            self.loadedProject = path
             self.settings = loadsettings(path)
             settings.SCALE = self.settings["scale"]
             settings.MARGIN = self.settings["margin"]
@@ -37,6 +39,8 @@ class CustomWindow(GUI.Ui_MainWindow):
         self.updateZones()
 
         self.make_graph(fileJustLoaded)
+        
+        self.zoneMargin.setText(str(settings.MARGIN))
 
     def setupUi(self, MainWindow):
         super().setupUi(MainWindow)
@@ -48,7 +52,16 @@ class CustomWindow(GUI.Ui_MainWindow):
         self.zoneMargin.textEdited.connect(self.margin_text_changed)
         self.actionLoad_project.triggered.connect(self.loadProject)
         self.actionReload_project.triggered.connect(self.reloadProject)
+        self.addPointButton.clicked.connect(self.addPointbutton_clicked)
 
+        self.waypointsFrame.setStyleSheet("#waypointwidget {\n"
+"border: 1px solid rgb(182, 184, 195);\n"
+"background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0.0738636, stop:0 rgba(205, 205, 205, 255), stop:1 rgba(238, 238, 238, 255))\n"
+"}")
+        self.noflyzonesFrame.setStyleSheet("#noflyzonewidget {\n"
+"border: 1px solid rgb(182, 184, 195);\n"
+"background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0.0738636, stop:0 rgba(205, 205, 205, 255), stop:1 rgba(238, 238, 238, 255))\n"
+"}")
         self.menubar.setStyleSheet("""
 QMenuBar {
     font-size: 12px;          /* smaller text */
@@ -62,6 +75,7 @@ QMenuBar::item {
 QMenuBar::item:selected {
     background: #ccc;
 }""")
+        
         self.globalUpdate()
 
     def margin_text_changed(self,text):
@@ -102,9 +116,18 @@ QMenuBar::item:selected {
         settings.KANTELHOEK = float(self.kantelhoek.text())
         settings.A = float(self.area.text())
 
-        settings.MAXLIFT = float(self.maxLift.text())
+        settings.MAXLIFT = float(self.maxLift.text())   
+
+        match self.comboBox.currentIndex():
+            case 0:
+                settings.ROUTETYPE = "single"
+            case 1:
+                settings.ROUTETYPE = "two"
+            case 2:
+                settings.ROUTETYPE = "all"
 
         #calculations
+        cls()
         main_route, r1,r2 = main(self.waypoints,self.noflyzones, self.BASE)
         
         self.make_graph()
@@ -113,6 +136,28 @@ QMenuBar::item:selected {
         else:
             self.draw_routes((r1, r2))
 
+    def addPointbutton_clicked(self):
+        dialog = AddPointDialog()
+        if dialog.exec():
+            data = dialog.get_data()
+            if data["use_xy"]:
+                print('using xy')
+                coord_type = "xy"
+            else:
+                coord_type = "gps"
+
+            if data["payload"] > settings.MAX_PAYLOAD:
+                msg = QMessageBox(QMessageBox.Icon.Warning, "Warning","The payload entered is too high for ther current drone configuration!" )
+                msg.exec()
+                return
+            try:
+                print(f"adding waypoint with settings: {data["lat"]} , {data["long"]} , {data["payload"]} , {coord_type} , {data["name"]}")
+                point = WayPoint(data["lat"],data["long"],data["payload"],coord_type, data["name"], origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1])
+                self.addPoint(point)
+            except:
+                msg = QMessageBox(QMessageBox.Icon.Critical, "Error","Couldn't add point, please check if what you entered is correct and complete!" )
+                msg.setIcon(QMessageBox.Icon.Critical)
+                msg.exec()
     def addPoint(self, waypoint):
         self.waypoints.append(waypoint)
         self.updatePointIndexes()
@@ -120,16 +165,26 @@ QMenuBar::item:selected {
         self.make_graph()
 
     def deletePoint(self, waypoint):
-        self.waypoints.remove(waypoint)
+        if waypoint == self.BASE:
+            msg = QMessageBox(QMessageBox.Icon.Warning, "Warning","You are trying to remove the Base which will lead to errors if you dont select a new one.\n\nProceed anyway?", QMessageBox.StandardButton.Abort|QMessageBox.StandardButton.Yes)
+            
+            if msg.exec() == QMessageBox.StandardButton.Yes: 
+                self.waypoints.remove(waypoint)
+                self.BASE = None
+        else:
+            self.waypoints.remove(waypoint)
         self.updatePointIndexes()
         self.updatePoints()
         self.make_graph()
-    
+
+    def changeBase(self, point:WayPoint):
+        self.BASE = point
+
     def deleteZone(self, zone):
         self.noflyzones.remove(zone)
         self.updateZones()
         self.make_graph()
-
+    
     def updatePointIndexes(self):
         idx = 0
         for point in self.waypoints:
@@ -147,10 +202,7 @@ QMenuBar::item:selected {
             widget.setGeometry(QtCore.QRect(0, y, 225, widget_height))
             widget.setMinimumHeight(widget_height)
             widget.setObjectName("waypointwidget")
-            widget.setStyleSheet("#waypointwidget {\n"
-"border: 1px solid rgb(182, 184, 195);\n"
-"background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0.0738636, stop:0 rgba(205, 205, 205, 255), stop:1 rgba(238, 238, 238, 255))\n"
-"}")
+
             label = QtWidgets.QLabel(parent=widget)
             label.setGeometry(QtCore.QRect(5, 5, 131, 21))
             label.setText(point.name)
@@ -158,7 +210,7 @@ QMenuBar::item:selected {
             gearButton = QtWidgets.QPushButton(parent=widget)
             gearButton.setGeometry(QtCore.QRect(170, 0, 31, widget_height))
             gearButton.setText("")
-            gearButton.clicked.connect(lambda: print(settings.EMPTY_MASS, ))
+            gearButton.clicked.connect(lambda: print('test'))
             deleteButton = QtWidgets.QPushButton(parent=widget)
             deleteButton.setGeometry(QtCore.QRect(195, 0, 31, widget_height))
             deleteButton.setText("X")
@@ -184,10 +236,6 @@ QMenuBar::item:selected {
             widget.setGeometry(QtCore.QRect(0, y, 225, widget_height))
             widget.setMinimumHeight(widget_height)
             widget.setObjectName("noflyzonewidget")
-            widget.setStyleSheet("#noflyzonewidget {\n"
-"border: 1px solid rgb(182, 184, 195);\n"
-"background-color: qlineargradient(spread:pad, x1:0.0400505, y1:1, x2:0.672, y2:0.0738636, stop:0 rgba(205, 205, 205, 255), stop:1 rgba(238, 238, 238, 255))\n"
-"}")
 
             label = QtWidgets.QLabel(parent=widget)
             label.setGeometry(QtCore.QRect(5, 5, 131, 21))
@@ -242,7 +290,8 @@ QMenuBar::item:selected {
         for point in self.waypoints:
             self.graphicsView.draw_point(point, QColor("blue"), 8,text=True,scale=settings.SCALE)
 
-        self.graphicsView.draw_point(self.BASE, QColor("orange"), 8,scale=settings.SCALE)
+        if self.BASE:
+            self.graphicsView.draw_point(self.BASE, QColor("orange"), 8,scale=settings.SCALE)
 
         
 
@@ -261,7 +310,60 @@ QMenuBar::item:selected {
             self.draw_route(route,color=colors[color_index%(len(colors)-1)])
             color_index += 1
        
+class AddPointDialog(QDialog):
+    def __init__(self, parent = None):
+        super().__init__(parent=parent)
+        self.ui = dlg.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.ui.okButton.clicked.connect(self.accept)
+        self.ui.cancelButton.clicked.connect(self.reject)
 
+        self.ui.usexyCheckBox.toggled.connect(self.checkBoxChanged)
+
+    def checkBoxChanged(self):
+        _translate = QtCore.QCoreApplication.translate
+        if self.ui.usexyCheckBox.isChecked():
+            self.ui.label.setText(_translate("Dialog", "Point X:"))
+            self.ui.latEdit.setPlaceholderText(_translate("Dialog", "Insert X coordinate..."))
+            self.ui.label_2.setText(_translate("Dialog", "Point Y"))
+            self.ui.longEdit.setPlaceholderText(_translate("Dialog", "Insert Y coordinate..."))
+        else:
+            self.ui.label.setText(_translate("Dialog", "Point latitude: "))
+            self.ui.latEdit.setPlaceholderText(_translate("Dialog", "insert latitude..."))
+            self.ui.label_2.setText(_translate("Dialog", "Point longitude: "))
+            self.ui.longEdit.setPlaceholderText(_translate("Dialog", "insert longitude..."))
+
+    def get_data(self):
+        if self.ui.latEdit.text() == "":
+            if self.ui.usexyCheckBox.isChecked(): 
+                lat = 0
+            else:
+                lat = settings.ORIGIN[0]
+        else: 
+            lat = float(self.ui.latEdit.text())
+        if self.ui.longEdit.text() == "":
+            if self.ui.usexyCheckBox.isChecked():
+                long = 0
+            else: 
+                long = settings.ORIGIN[1]
+        else: 
+            long = float(self.ui.longEdit.text())
+        if self.ui.payloadEdit.text() == "":
+            payload = 0
+        else: 
+            payload = float(self.ui.payloadEdit.text())
+        if self.ui.nameEdit.text() == "":
+            name = "Waypoint" 
+        else: 
+            name = self.ui.nameEdit.text()
+        print('returning: ', lat, long)
+        return {
+            "name": name,
+            "lat": lat,
+            "long": long,
+            "payload": payload,
+            "use_xy": self.ui.usexyCheckBox.isChecked()
+        }
 
 if __name__ == "__main__":
     #print(QStyleFactory.keys())

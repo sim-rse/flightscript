@@ -49,7 +49,7 @@ def v_vert(mass):
     F = thrust - lift_vert(mass)
 
     if F <= 0:
-        return 0
+        raise ValueError("The current mass is too high, the drone can't lift it!")
 
     return math.sqrt((2 * F) / (settings.CD * settings.RHO * settings.A))
 

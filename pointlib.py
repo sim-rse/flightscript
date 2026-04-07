@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import json
 from rich import print
 import sys
+import settings
 
 
 def loadWaypoints(path, general_margin = 0):
@@ -13,7 +14,8 @@ def loadWaypoints(path, general_margin = 0):
         waypoints = dump["Waypoints"]
         pointlist = []
         bases = [waypoints[idx] for idx in waypoints if waypoints[idx]["type"]=="base"]     #should be only one
-        origin = bases[0]["position"]
+        if len(bases) >= 1:
+            settings.ORIGIN = bases[0]["position"]
         for idx in waypoints:
             coord1 = waypoints[idx]["position"][0]
             coord2 = waypoints[idx]["position"][1]
@@ -21,7 +23,7 @@ def loadWaypoints(path, general_margin = 0):
             payload = waypoints[idx]["payload"]
             point_type = waypoints[idx]["type"]
             
-            point = WayPoint(coord1, coord2, payload, name=name, idx=int(idx), origin_lat=origin[0], origin_lon=origin[1])
+            point = WayPoint(coord1, coord2, payload, name=name, idx=int(idx), origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1])
             if point_type == "base":
                 base = point
 
@@ -35,7 +37,7 @@ def loadWaypoints(path, general_margin = 0):
             bounds_list = noFlyZones[idx]["bounds"]
             bounds = []
             for point in bounds_list:
-                bounds.append(Point(point[0],point[1],origin_lat=origin[0], origin_lon=origin[1]))
+                bounds.append(Point(point[0],point[1],origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1]))
             name = noFlyZones[idx]["name"]
             margin = noFlyZones[idx].get("margin", general_margin) #if there's no "margin" key the general value applies
             zones.append(NoFlyZone(bounds,idx, name, margin))
@@ -150,7 +152,7 @@ def shortest_path(graph, start, goal):
         path.reverse()
     except KeyError as e:
         print(f"\nGot a keyerror while building visibility graph. It's most likely due to a waypoint being inside a noflyzone. Try removing zones or reduce their margin around the following point:\n{e}")
-        exit()
+        #exit()
     return path
 
 def normalize(x, y):
@@ -218,7 +220,7 @@ def plot_scene(start, goal, noflyzones, link=None, show_graph=False, graph=None)
 class Point:
     EARTH_RADIUS = 6371000  # meters
 
-    def __init__(self, coord1, coord2, coord_type = "gps", origin_lat = 50.9405, origin_lon = 4.21039, idx:int = -1):		
+    def __init__(self, coord1, coord2, coord_type = "gps", origin_lat = settings.ORIGIN[0], origin_lon = settings.ORIGIN[1], idx:int = -1):		
         #origin_lat, origin_lon: reference point in degrees
         self.origin_lat = math.radians(origin_lat)
         self.origin_lon = math.radians(origin_lon)
@@ -278,7 +280,7 @@ class Point:
     
 
 class WayPoint(Point):
-    def __init__(self, coord1, coord2, payload = 0, coord_type = "gps", name="Point",  origin_lat = 50.9405, origin_lon = 4.21039, idx:int = -1):
+    def __init__(self, coord1, coord2, payload = 0, coord_type = "gps", name="Point",  origin_lat = settings.ORIGIN[0], origin_lon = settings.ORIGIN[1], idx:int = -1):
         super().__init__(coord1, coord2, coord_type, origin_lat, origin_lon, idx)
 
         self.name = name
