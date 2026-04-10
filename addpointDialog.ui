@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>241</width>
-    <height>200</height>
+    <height>210</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,14 +21,14 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>20</y>
+     <y>30</y>
      <width>211</width>
      <height>101</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="formLayout">
     <item row="0" column="0">
-     <widget class="QLabel" name="label_3">
+     <widget class="QLabel" name="nameLabel">
       <property name="text">
        <string>Point Name:</string>
       </property>
@@ -42,7 +42,7 @@
      </widget>
     </item>
     <item row="1" column="0">
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="latLabel">
       <property name="text">
        <string>Point latitude: </string>
       </property>
@@ -56,7 +56,7 @@
      </widget>
     </item>
     <item row="2" column="0">
-     <widget class="QLabel" name="label_2">
+     <widget class="QLabel" name="longLabel">
       <property name="text">
        <string>Point longitude: </string>
       </property>
@@ -70,7 +70,7 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QLabel" name="label_4">
+     <widget class="QLabel" name="payloadLabel">
       <property name="text">
        <string>Payload to drop: </string>
       </property>
@@ -89,7 +89,7 @@
    <property name="geometry">
     <rect>
      <x>150</x>
-     <y>170</y>
+     <y>180</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -102,7 +102,7 @@
    <property name="geometry">
     <rect>
      <x>70</x>
-     <y>170</y>
+     <y>180</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -115,7 +115,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>140</y>
+     <y>150</y>
      <width>161</width>
      <height>18</height>
     </rect>
@@ -128,13 +128,33 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>120</y>
+     <y>130</y>
      <width>211</width>
      <height>16</height>
     </rect>
    </property>
    <property name="orientation">
     <enum>Qt::Horizontal</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="addLabel">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>121</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <weight>75</weight>
+     <bold>true</bold>
+     <underline>true</underline>
+    </font>
+   </property>
+   <property name="text">
+    <string>Add Waypoint</string>
    </property>
   </widget>
  </widget>

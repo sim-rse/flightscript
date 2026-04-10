@@ -40,7 +40,11 @@ def loadWaypoints(path, general_margin = 0):
                 bounds.append(Point(point[0],point[1],origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1]))
             name = noFlyZones[idx]["name"]
             margin = noFlyZones[idx].get("margin", general_margin) #if there's no "margin" key the general value applies
-            zones.append(NoFlyZone(bounds,idx, name, margin))
+            if "margin" in noFlyZones[idx]:
+                fixedmargin = True
+            else:
+                fixedmargin = False
+            zones.append(NoFlyZone(bounds,idx, name, margin, fixedmargin, settings.ORIGIN[0], settings.ORIGIN[1]))
         
         
 
@@ -225,8 +229,13 @@ class Point:
         self.origin_lat = math.radians(origin_lat)
         self.origin_lon = math.radians(origin_lon)
         self.cos_lat = math.cos(self.origin_lat)
+        self.preferred_coord = coord_type
+                
+        self.setcoords(coord1, coord2, coord_type)
         
-        if coord_type == "gps": 
+        self.idx = idx
+    def setcoords(self, coord1, coord2, coord_type = "gps"):
+        if coord_type == "gps":
             self.x, self.y = self.to_xy(coord1, coord2)
             self.lat, self.lon = coord1, coord2
         elif coord_type == "xy": 
@@ -234,9 +243,6 @@ class Point:
             self.lat, self.lon = self.to_gps(coord1, coord2)
         else: 
             raise NotImplementedError()
-        
-        self.idx = idx
-
     def to_xy(self, lat, lon):
         #Convert latitude/longitude to x/y in meters
         lat_rad = math.radians(lat)
@@ -266,13 +272,13 @@ class Point:
     def __repr__(self):
         return self.__str__()
     
-    def __eq__(self, other):
+    """def __eq__(self, other):
         if not isinstance(other, Point):
             return False
-        return math.isclose(self.x, other.x) and math.isclose(self.y, other.y)
+        return math.isclose(self.x, other.x) and math.isclose(self.y, other.y)"""
 
-    def __hash__(self):
-        return hash((round(self.x, 6), round(self.y, 6)))
+    """def __hash__(self):
+        return hash((round(self.x, 6), round(self.y, 6)))"""
     
     @property
     def coords(self):
@@ -290,7 +296,7 @@ class WayPoint(Point):
         return f"Waypoint \"{self.name}\" @ x = {self.x:.3f}, y = {self.y:.3f}"
 
 class NoFlyZone:
-    def __init__(self, bounds: list, idx = -1, name = "no fly zone", margin = 0, origin_lat=50.9405, origin_lon=4.21039):
+    def __init__(self, bounds: list, idx = -1, name = "no fly zone", margin = 0, fixedmargin=False,  origin_lat=50.9405, origin_lon=4.21039):
         if is_ccw(bounds):              #checkt de volgorde van de bound-punten van de no fly zone. indien ze in de slechte volgorde worden ingegeven kan het onflaten mislopen
             bounds = list(reversed(bounds))
         self.bounds = bounds        #list with the coordinates of the corners in order
@@ -298,10 +304,10 @@ class NoFlyZone:
         self.name = name
         self.margin = margin
         
-        if margin:
-            self.fixedvalue = True
+        if fixedmargin:
+            self.fixedmargin = True
         else:
-            self.fixedvalue = False
+            self.fixedmargin = False
         
     #vv niet de beste manier ma bon het werkt vv
     @property

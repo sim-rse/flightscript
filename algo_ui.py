@@ -1,5 +1,6 @@
 import GUI
-import addPointDialog as dlg
+import addPointDialog as ptdlg
+import addZoneDialog as zndlg
 from pointlib import *
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QDialog, QMessageBox
@@ -37,7 +38,7 @@ class CustomWindow(GUI.Ui_MainWindow):
     def globalUpdate(self, fileJustLoaded = False):
         self.updatePoints()
         self.updateZones()
-
+        self.baseLabel.setText(self.BASE.name)
         self.make_graph(fileJustLoaded)
         
         self.zoneMargin.setText(str(settings.MARGIN))
@@ -53,6 +54,7 @@ class CustomWindow(GUI.Ui_MainWindow):
         self.actionLoad_project.triggered.connect(self.loadProject)
         self.actionReload_project.triggered.connect(self.reloadProject)
         self.addPointButton.clicked.connect(self.addPointbutton_clicked)
+        self.addZoneButton.clicked.connect(self.addZoneButton_clicked)
 
         self.waypointsFrame.setStyleSheet("#waypointwidget {\n"
 "border: 1px solid rgb(182, 184, 195);\n"
@@ -82,7 +84,8 @@ QMenuBar::item:selected {
         try:
             text = int(text)
             for zone in self.noflyzones:
-                zone.margin = text
+                if not zone.fixedmargin:
+                    zone.margin = text
             self.make_graph()
         except:
             print(f"Margin text input is not the right type, ignoring till correct")
@@ -147,22 +150,55 @@ QMenuBar::item:selected {
                 coord_type = "gps"
 
             if data["payload"] > settings.MAX_PAYLOAD:
-                msg = QMessageBox(QMessageBox.Icon.Warning, "Warning","The payload entered is too high for ther current drone configuration!" )
+                msg = QMessageBox(QMessageBox.Icon.Warning, "Warning","The payload entered is too high for the current drone configuration!" )
                 msg.exec()
                 return
             try:
-                print(f"adding waypoint with settings: {data["lat"]} , {data["long"]} , {data["payload"]} , {coord_type} , {data["name"]}")
-                point = WayPoint(data["lat"],data["long"],data["payload"],coord_type, data["name"], origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1])
+                point_idx = len(self.waypoints)+1
+                print(f"adding waypoint with settings: {data["lat"]} , {data["lon"]} , {data["payload"]} , {coord_type} , {data["name"]}")
+                point = WayPoint(data["lat"],data["lon"],data["payload"],coord_type, data["name"], origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1], idx = point_idx)
                 self.addPoint(point)
             except:
                 msg = QMessageBox(QMessageBox.Icon.Critical, "Error","Couldn't add point, please check if what you entered is correct and complete!" )
-                msg.setIcon(QMessageBox.Icon.Critical)
+                #msg.setIcon(QMessageBox.Icon.Critical)
                 msg.exec()
+
+    def editPointbutton_clicked(self, waypoint:WayPoint):
+        dialog = AddPointDialog(edit = True)
+
+        data = {
+            "name": waypoint.name,
+            "coord_type": waypoint.preferred_coord,
+            "x": waypoint.x,
+            "y": waypoint.y,
+            "lat": waypoint.lat,
+            "lon": waypoint.lon, 
+            "payload": waypoint.payload
+        }
+        dialog.load_data(data)
+        if dialog.exec():
+            data = dialog.get_data()
+            if data["use_xy"]:
+                coord_type = "xy"
+            else:
+                coord_type = "gps"
+            waypoint.preferred_coord = coord_type
+            if data["payload"] > settings.MAX_PAYLOAD:
+                msg = QMessageBox(QMessageBox.Icon.Warning, "Warning","The payload entered is too high for ther current drone configuration!" )
+                msg.exec()
+                return
+            waypoint.name = data["name"]
+            waypoint.payload = data["payload"]
+            waypoint.setcoords(data["lat"], data["lon"], coord_type)
+
+            self.globalUpdate()
+
     def addPoint(self, waypoint):
         self.waypoints.append(waypoint)
         self.updatePointIndexes()
         self.updatePoints()
         self.make_graph()
+    
 
     def deletePoint(self, waypoint):
         if waypoint == self.BASE:
@@ -173,12 +209,56 @@ QMenuBar::item:selected {
                 self.BASE = None
         else:
             self.waypoints.remove(waypoint)
+        
         self.updatePointIndexes()
-        self.updatePoints()
-        self.make_graph()
+        self.globalUpdate()
 
     def changeBase(self, point:WayPoint):
         self.BASE = point
+
+    def addZoneButton_clicked(self):
+        dialog = AddZoneDialog()
+        if dialog.exec():
+            data = dialog.get_data()
+            if "margin" in data:
+                margin = data["margin"]
+                fixedmargin = True
+            else:
+                margin = settings.MARGIN
+                fixedmargin = False
+            zone = NoFlyZone(data["bounds"], name=data["name"], idx=len(self.noflyzones)+1,margin=margin,fixedmargin=fixedmargin)
+            self.noflyzones.append(zone)
+            self.globalUpdate()
+        
+    def editZoneButton_clicked(self, zone:NoFlyZone):
+        dialog = AddZoneDialog(edit = True)
+
+        data = {
+            "name": zone.name,
+            "bounds": zone.bounds
+        }
+
+        if zone.fixedmargin:
+            data["margin"]=zone.margin
+
+        dialog.load_data(data)
+        if dialog.exec():
+            data = dialog.get_data()
+            if "margin" in data:
+                margin = data["margin"]
+                fixedmargin = True
+            else:
+                margin = settings.MARGIN
+                fixedmargin = False
+            zone.bounds = data["bounds"]
+            zone.name = data["name"]
+            zone.margin = margin
+            zone.fixedmargin = fixedmargin
+
+            self.globalUpdate()
+            
+    def addZone(self, zone):
+        self.noflyzones.append(zone)
 
     def deleteZone(self, zone):
         self.noflyzones.remove(zone)
@@ -210,7 +290,7 @@ QMenuBar::item:selected {
             gearButton = QtWidgets.QPushButton(parent=widget)
             gearButton.setGeometry(QtCore.QRect(170, 0, 31, widget_height))
             gearButton.setText("")
-            gearButton.clicked.connect(lambda: print('test'))
+            gearButton.clicked.connect(lambda _, p=point: self.editPointbutton_clicked(p))
             deleteButton = QtWidgets.QPushButton(parent=widget)
             deleteButton.setGeometry(QtCore.QRect(195, 0, 31, widget_height))
             deleteButton.setText("X")
@@ -244,6 +324,7 @@ QMenuBar::item:selected {
             gearButton = QtWidgets.QPushButton(parent=widget)
             gearButton.setGeometry(QtCore.QRect(170, 0, 31, widget_height))
             gearButton.setText("")
+            gearButton.clicked.connect(lambda _, z=zone: self.editZoneButton_clicked(z))
             deleteButton = QtWidgets.QPushButton(parent=widget)
             deleteButton.setGeometry(QtCore.QRect(195, 0, 31, widget_height))
             deleteButton.setText("X")
@@ -311,10 +392,23 @@ QMenuBar::item:selected {
             color_index += 1
        
 class AddPointDialog(QDialog):
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, edit = False, boundpoint=False):
         super().__init__(parent=parent)
-        self.ui = dlg.Ui_Dialog()
+        self.ui = ptdlg.Ui_Dialog()
         self.ui.setupUi(self)
+
+        if edit: 
+            _translate = QtCore.QCoreApplication.translate
+            self.setWindowTitle(_translate("Dialog", "Edit Point"))
+            self.ui.addLabel.setText(_translate("Dialog", "Edit WayPoint"))
+        if boundpoint:
+            _translate = QtCore.QCoreApplication.translate
+            self.setWindowTitle(_translate("Dialog", "Add bound point"))
+            self.ui.addLabel.setText(_translate("Dialog", "Add bound point"))
+            self.ui.nameEdit.setPlaceholderText("No name needed")
+            self.ui.nameEdit.setEnabled(False)
+            self.ui.payloadEdit.setPlaceholderText("No payload needed")
+            self.ui.payloadEdit.setEnabled(False)
         self.ui.okButton.clicked.connect(self.accept)
         self.ui.cancelButton.clicked.connect(self.reject)
 
@@ -323,14 +417,14 @@ class AddPointDialog(QDialog):
     def checkBoxChanged(self):
         _translate = QtCore.QCoreApplication.translate
         if self.ui.usexyCheckBox.isChecked():
-            self.ui.label.setText(_translate("Dialog", "Point X:"))
+            self.ui.latLabel.setText(_translate("Dialog", "Point X:"))
             self.ui.latEdit.setPlaceholderText(_translate("Dialog", "Insert X coordinate..."))
-            self.ui.label_2.setText(_translate("Dialog", "Point Y"))
+            self.ui.longLabel.setText(_translate("Dialog", "Point Y"))
             self.ui.longEdit.setPlaceholderText(_translate("Dialog", "Insert Y coordinate..."))
         else:
-            self.ui.label.setText(_translate("Dialog", "Point latitude: "))
+            self.ui.latLabel.setText(_translate("Dialog", "Point latitude: "))
             self.ui.latEdit.setPlaceholderText(_translate("Dialog", "insert latitude..."))
-            self.ui.label_2.setText(_translate("Dialog", "Point longitude: "))
+            self.ui.longLabel.setText(_translate("Dialog", "Point longitude: "))
             self.ui.longEdit.setPlaceholderText(_translate("Dialog", "insert longitude..."))
 
     def get_data(self):
@@ -360,11 +454,158 @@ class AddPointDialog(QDialog):
         return {
             "name": name,
             "lat": lat,
-            "long": long,
+            "lon": long,
             "payload": payload,
             "use_xy": self.ui.usexyCheckBox.isChecked()
         }
 
+    def load_data(self, data):
+        self.ui.nameEdit.setText(data["name"])
+        self.ui.payloadEdit.setText(str(data["payload"]))
+        if data["coord_type"] == "xy":
+            self.ui.usexyCheckBox.setChecked(True)
+            self.ui.latEdit.setText(str(data["x"]))
+            self.ui.longEdit.setText(str(data["y"]))
+        else:
+            self.ui.usexyCheckBox.setChecked(False)
+            self.ui.latEdit.setText(str(data["lat"]))
+            self.ui.longEdit.setText(str(data["lon"]))
+
+class AddZoneDialog(QDialog):
+    def __init__(self, parent = None, edit=False):
+        super().__init__(parent=parent)
+        self.ui = zndlg.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.ui.okButton.clicked.connect(self.accept)
+        self.ui.cancelButton.clicked.connect(self.reject)
+        self.ui.addzoneButton.clicked.connect(self.addPoint)
+        self.ui.checkBox.checkStateChanged.connect(self.checkboxCheckChange)
+        self.bounds = []
+        self.updatePoints()
+
+        
+        if edit: 
+            _translate = QtCore.QCoreApplication.translate
+            self.setWindowTitle(_translate("Dialog", "Edit Zone"))
+
+    def addPoint(self):
+        dialog = AddPointDialog(boundpoint = True)
+        if dialog.exec():
+            data = dialog.get_data()
+            if data["use_xy"]:
+                print('using xy')
+                coord_type = "xy"
+            else:
+                coord_type = "gps"
+
+            point = Point(data["lat"],data["lon"],coord_type, origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1])
+            self.bounds.append(point)
+            self.updatePoints()
+    
+    def get_data(self):
+        if self.ui.nameEdit.text() == "":
+            name = "noFlyZone" 
+        else: 
+            name = self.ui.nameEdit.text()
+        data = {"name":name, "bounds":self.bounds}
+
+        if self.ui.checkBox.isChecked():
+            try:
+                data["margin"] = int(self.ui.marginEdit.text())
+            except:
+                print("Error while converting margin to int")
+                print(self.ui.marginEdit.text())
+                print(type(self.ui.marginEdit.text()))
+                data["margin"] = 0
+        return data
+    
+    def load_data(self, data:list):
+        self.ui.nameEdit.setText(data["name"])
+        self.bounds = data["bounds"]
+        if "margin" in data:
+            self.ui.marginEdit.setText(str(data["margin"]))
+            self.ui.checkBox.setChecked(True)
+        self.updatePoints()
+    
+    
+    def updatePoints(self):
+        for child in self.ui.frame.children():
+            if child != self.ui.addzoneButton:
+                child.hide()
+                child.deleteLater()
+
+        y = 0
+        widget_height = 30
+        for point in self.bounds:
+            widget = QtWidgets.QWidget(parent=self.ui.frame)
+            widget.setGeometry(QtCore.QRect(0, y, 225, widget_height))
+            widget.setMinimumHeight(widget_height)
+            widget.setObjectName("waypointwidget")
+
+            label = QtWidgets.QLabel(parent=widget)
+            label.setGeometry(QtCore.QRect(5, 5, 131, 21))
+            label.setText("Point")
+
+            deleteButton = QtWidgets.QPushButton(parent=widget)
+            deleteButton.setGeometry(QtCore.QRect(195, 0, 30, widget_height))
+            deleteButton.setText("X")
+            deleteButton.clicked.connect(lambda _, p=point: self.deletePoint(p))       #clicked.connect automatically gives only one bool as arg to the function, but you can give extra arguments if you use the lambda function (the lambda will get the bool and you can pass whatever you'd like)
+            icon = QtGui.QIcon()                                                       # i also used this weird p=point to get the current value of point. if you just pass point to deletePoint the latest point value (so the last one of the for loop) will apply to all buttons!
+            icon.addPixmap(QtGui.QPixmap("ressources/gear.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On)
+
+            y+=30
+            widget.show()       #else they don't show up after a second update
+        self.ui.frame.show()
+        self.ui.addzoneButton.move(QtCore.QPoint(0,y))
+        
+        y+= self.ui.addzoneButton.height()
+        self.ui.frame.setGeometry(QtCore.QRect(0, 0, 231, y))
+        self.ui.scrollAreaWidgetContents.setMinimumSize(QtCore.QSize(0, y))
+    
+    def updatePoints_(self):
+        # Clear layout
+        while self.ui.pointsLayout.count():
+            item = self.ui.pointsLayout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        # Rebuild list
+        for point in self.bounds:
+            widget = QtWidgets.QWidget()
+            widget.setSizePolicy(
+                QtWidgets.QSizePolicy.Policy.Expanding,
+                QtWidgets.QSizePolicy.Policy.Fixed
+            )
+            widget.setMinimumHeight(30)
+            widget.setMaximumHeight(30)
+
+            layout = QtWidgets.QHBoxLayout(widget)
+            layout.setContentsMargins(5, 0, 5, 0)
+
+            label = QtWidgets.QLabel("Point")
+
+            deleteButton = QtWidgets.QPushButton("X")
+            deleteButton.setFixedSize(20, 20)
+            deleteButton.clicked.connect(lambda _, p=point: self.deletePoint(p))
+
+            layout.addWidget(label)
+            layout.addStretch()
+            layout.addWidget(deleteButton)
+
+            self.ui.pointsLayout.addWidget(widget)
+
+        # Keep items at top WITHOUT breaking scrolling
+        self.ui.pointsLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+
+    def deletePoint(self, point):
+        self.bounds.remove(point)
+        self.updatePoints()
+    def checkboxCheckChange(self):
+        if self.ui.checkBox.isChecked():
+            self.ui.marginEdit.setEnabled(True)
+        else:
+            self.ui.marginEdit.setEnabled(False)
 if __name__ == "__main__":
     #print(QStyleFactory.keys())
 
