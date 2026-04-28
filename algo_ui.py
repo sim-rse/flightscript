@@ -22,7 +22,7 @@ class CustomWindow(GUI.Ui_MainWindow):
             "margin": 1,
             "scale": 1 
         }
-        self.loadedProject = "waypoints_BXL.json"
+        self.loadedProject = "waypoints.json"
         self.loadFile(self.loadedProject)
         
 
@@ -34,6 +34,7 @@ class CustomWindow(GUI.Ui_MainWindow):
             settings.MARGIN = self.settings["margin"]
 
             self.waypoints, self.noflyzones, self.BASE = loadWaypoints(path, settings.MARGIN)
+            
 
     def globalUpdate(self, fileJustLoaded = False):
         self.updatePoints()
@@ -348,7 +349,8 @@ QMenuBar::item:selected {
 
         # optional map image
         # self.graphicsView.draw_background("map.png")
-
+        if "background_outline" in self.settings:
+            self.graphicsView.draw_outline(self.settings["background_outline"], color=QColor(150,150,150), scale = self.settings["scale"])
         # -----------------------------
         # no-fly zones
         # -----------------------------
@@ -385,7 +387,7 @@ QMenuBar::item:selected {
             self.graphicsView.draw_path(link.path, color=color,scale=settings.SCALE)
     
     def draw_routes(self, routes):
-        colors = [QColor(0,200,200), QColor(200,200,200), QColor(200,200,0), QColor(200,0,200),QColor(100,200,100)]
+        colors = [QColor(0,150,150), QColor(100,100,100), QColor(200,200,0), QColor(200,0,200),QColor(100,200,100)]
         color_index = 0
         for route in routes:
             self.draw_route(route,color=colors[color_index%(len(colors)-1)])

@@ -5,7 +5,7 @@ from PyQt6.QtGui import (
     QPixmap, QPen, QBrush, QColor, QPolygonF, QPainter
 )
 from PyQt6.QtCore import Qt, QPointF
-import pointlib
+import pointlib, settings
 
 def draw_point(scene:QGraphicsScene, point):
     r = 2
@@ -114,7 +114,7 @@ class MapView(QGraphicsView):
         
         if text:
             #drawing text labels
-            text_scale = 0.5
+            text_scale = 0.8
 
             text_item = self.scene_.addText(zone.name)
             text_item.setScale(text_scale)
@@ -142,9 +142,9 @@ class MapView(QGraphicsView):
                     pen
                 )
 
-    def draw_path(self, path, color = QColor(0, 200, 0), scale = 1):
+    def draw_path(self, path, color = QColor(0, 200, 0), scale = 1, penwidth = 1):
         pen = QPen(color)
-        pen.setWidth(1)
+        pen.setWidth(penwidth)
 
         for i in range(len(path)-1):
             a = path[i]
@@ -155,6 +155,11 @@ class MapView(QGraphicsView):
                 b.x*scale, -(b.y*scale),
                 pen
             )
+    def draw_outline(self, outline, color = QColor(150, 150, 150), scale=1, penwidth = 2):
+        points = []
+        for point in outline:
+            points.append(pointlib.Point(point[0], point[1], origin_lat=settings.ORIGIN[0], origin_lon=settings.ORIGIN[1]))
+        self.draw_path(points, color=color, scale=scale, penwidth=penwidth)
 
     def clear(self):
         self.scene_.clear()

@@ -21,31 +21,31 @@ def lift_vert(mass):
     return mass * g
 
 
-def total_thrust():
+def max_thrust():
     return settings.MAXLIFT * settings.MOTORS
 
 
 # --- VERSNELLINGEN ---
 
 def a_hor(mass):
-    thrust_h = total_thrust() * math.sin(math.radians(settings.KANTELHOEK))
+    thrust_h = max_thrust() * math.sin(math.radians(settings.KANTELHOEK))
     return thrust_h / mass
 
 
 def a_vert(mass):
-    thrust = total_thrust()
+    thrust = max_thrust()
     return (thrust - lift_vert(mass)) / mass
 
 
 # --- MAXIMALE SNELHEDEN ---
 
 def v_hor(mass):
-    thrust_h = total_thrust() * math.sin(math.radians(settings.KANTELHOEK))
+    thrust_h = max_thrust() * math.sin(math.radians(settings.KANTELHOEK))
     return math.sqrt((2 * thrust_h) / (settings.CD * settings.RHO * settings.A))
 
 
 def v_vert(mass):
-    thrust = total_thrust()
+    thrust = max_thrust()
     F = thrust - lift_vert(mass)
 
     if F <= 0:

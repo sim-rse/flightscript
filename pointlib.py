@@ -197,25 +197,34 @@ def plot_scene(start, goal, noflyzones, link=None, show_graph=False, graph=None)
     for zone in noflyzones:
         xs = [p.x for p in zone.bounds] + [zone.bounds[0].x]
         ys = [p.y for p in zone.bounds] + [zone.bounds[0].y]
-        plt.plot(xs, ys)
+        plt.fill(xs, ys, label="noFlyZone")
 
     # --- draw visibility graph (optional) ---
     if show_graph and graph is not None:
         for node, edges in graph.items():
             for neigh, _ in edges:
-                plt.plot([node.x, neigh.x], [node.y, neigh.y], linewidth=0.5)
+                plt.plot([node.x, neigh.x], [node.y, neigh.y], linewidth=0.5, color="gray", label="Vis. graph")
 
     # --- draw path ---
     if link is not None:
         xs = [p.x for p in link.path]
         ys = [p.y for p in link.path]
-        plt.plot(xs, ys, linewidth=3)
+        plt.plot(xs, ys, linewidth=3, color="green", label="Path")
 
     # --- draw start/goal ---
     plt.scatter([start.x], [start.y], s=100)
     plt.scatter([goal.x], [goal.y], s=100)
 
     plt.axis("equal")
+    
+    handles, labels = plt.gca().get_legend_handles_labels()
+    newLabels, newHandles = [], []
+    for handle, label in zip(handles, labels):
+        if label not in newLabels or label == "noFlyZone":
+            newLabels.append(label)
+            newHandles.append(handle)
+
+    plt.legend(newHandles, newLabels)
     plt.grid(True)
     plt.show()
 
@@ -396,7 +405,7 @@ class Link:
         self.path = shortest_path(graph, start, end)
 
         if __name__ == "__main__":
-            plot_scene(start, goal, noflyzones, link=self, show_graph=False, graph=graph)
+            plot_scene(start, goal, noflyzones, link=self, show_graph=True, graph=graph)
             ...
 
     def length(self):

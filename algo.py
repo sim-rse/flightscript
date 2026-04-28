@@ -331,6 +331,8 @@ def main(all_waypoints = waypoints, noflyzones_ = noflyzones, BASE = BASE):
             print_partial_energies(best_split[3], "Split 2")
 
             console.print(f"\n[bold yellow]Total energy:[/bold yellow] {best_split_energy/3600:.1f} Wh")
+        else: 
+            print('No best split route found !')
     #----------------------------------------------------------------------------------
 
     def to_links(route):
